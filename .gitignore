@@ -1,0 +1,49 @@
+# Unity-generated folders
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Build output
+/[Bb]uild/
+/[Bb]uilds/
+*.apk
+*.aab
+*.app
+
+# Generated project files / Code Editor
+.vscode/
+.vs/
+.idea/
+.gradle/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+/[Aa]ssets/Plugins/Editor/JetBrains*
+
+# Crash reports, temp and backup files
+sysinfo.txt
+mono_crash.*
+crashlytics-build.properties
+*.tmp
+*.blend1
+*.blend1.meta
+/[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Leftovers from Unity Version Control
+.plastic/
+ignore.conf
