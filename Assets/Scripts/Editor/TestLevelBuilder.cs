@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 namespace HyperInfinite
 {
     /// <summary>
-    /// Hyper Infinite > Builds Test Level. Makes a grey-box scene for testing controls, plus
+    /// Hyper Infinite > Build Test Level. Makes a grey-box scene for testing combat and controls, plus
     /// the prefabs and materials it uses, as ordinary assets in the project's own folders: Scenes,
     /// Prefabs, Materials/Greybox and Textures/Greybox. Open and edit them like anything else; run the
     /// command again to rebuild them from scratch.
@@ -28,6 +28,8 @@ namespace HyperInfinite
         [MenuItem("Hyper Infinite/Build Test Level", priority = 1)]
         public static void Build()
         {
+            var controlsAsset = ControlsAsset();
+            if (!controlsAsset) return;   // checked first, so nothing has been replaced yet
             if (File.Exists(ScenePath) && !EditorUtility.DisplayDialog("Rebuild Test Level?",
                     "This rebuilds Scenes/TestLevel.unity and the prefabs and materials it made in Prefabs and Materials/Greybox. " +
                     "Changes you made to them will be lost.", "Rebuild", "Cancel"))
@@ -45,7 +47,7 @@ namespace HyperInfinite
             SetUpSun();
 
             var kit = new Kit();
-            var playerPrefab = BuildPlayerPrefab(kit);
+            var playerPrefab = BuildPlayerPrefab(kit, controlsAsset);
             var dummyPrefab = BuildDummyPrefab(kit);
 
             var level = new GameObject("Level").transform;
@@ -68,15 +70,37 @@ namespace HyperInfinite
 
         // ---- The player ------------------------------------------------------------------
 
-        /// <summary>The Input Actions asset with every binding. It's part of the Controls work, so it's written by hand, not built here.</summary>
+        /// <summary>
+        /// The Input Actions asset with every binding. It's part of the Controls work, so it's made by hand, not
+        /// built here. If it can't be loaded, this says why in a dialog and returns null.
+        /// </summary>
         static InputActionAsset ControlsAsset()
         {
             var asset = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ControlsAssetPath);
-            if (!asset) Debug.LogError("Hyper Infinite: " + ControlsAssetPath + " is missing, so the Player has no controls. Add it, then build again.");
-            return asset;
+            if (asset) return asset;
+
+            string problem;
+            if (File.Exists(ControlsAssetPath))
+            {
+                problem = "The file is there, but Unity couldn't load it as Input Actions. That usually means part of the text " +
+                          "didn't copy (the Console shows an import error for it). Copy the whole file again, then build.";
+            }
+            else
+            {
+                // Look for it in another folder or under a slightly different name, such as one ending in a hidden .txt.
+                string[] found = AssetDatabase.FindAssets(Path.GetFileNameWithoutExtension(ControlsAssetPath), new[] { "Assets" });
+                for (int i = 0; i < found.Length; i++) found[i] = AssetDatabase.GUIDToAssetPath(found[i]);
+                problem = found.Length == 0
+                    ? "It isn't in the project yet. Add it, then build again."
+                    : "Found " + string.Join(", ", found) + " instead. Move or rename it to match exactly. Windows can hide " +
+                      "a .txt on the end of a file name; turn on File name extensions in File Explorer's View menu to see it.";
+            }
+            EditorUtility.DisplayDialog("Controls asset needed", "The Player gets its controls from " + ControlsAssetPath +
+                                        ".\n\n" + problem + "\n\nThe build stopped before changing anything.", "OK");
+            return null;
         }
 
-        static GameObject BuildPlayerPrefab(Kit kit)
+        static GameObject BuildPlayerPrefab(Kit kit, InputActionAsset controlsAsset)
         {
             var root = new GameObject("Player") { tag = "Player" };
             var body = root.AddComponent<CharacterController>();
@@ -88,7 +112,7 @@ namespace HyperInfinite
             body.skinWidth = 0.05f;
             body.minMoveDistance = 0f;
             var controls = root.AddComponent<PlayerControls>();
-            Wire(controls, "actions", ControlsAsset());
+            Wire(controls, "actions", controlsAsset);
             root.AddComponent<PlayerMotor>();
 
             // Casts the player's shadow without getting in the first-person view.
@@ -110,52 +134,66 @@ namespace HyperInfinite
         }
 
         /// <summary>
-        /// The 1887 viewmodel, built at roughly real size and then shrunk to 40% close to the eye.
-        /// It looks the same as a full-size gun further away, and pokes into walls far less.
+        /// The Energy Blast shotgun from the GDD's concept art: a white and black lever-action body with three
+        /// energy emitters stacked at the muzzle. It's built at roughly real size and then shrunk to 40% close to
+        /// the eye, which looks the same as a full-size gun further away and pokes into walls far less.
         /// </summary>
-        static LeverShotgun BuildShotgun(Kit kit, Transform eyes)
+        static EnergyBlastShotgun BuildShotgun(Kit kit, Transform eyes)
         {
-            var gun = new GameObject("Shotgun (1887)");
+            var gun = new GameObject("Energy Blast Shotgun");
             gun.transform.SetParent(eyes, false);
             gun.transform.localPosition = new Vector3(0.13f, -0.12f, 0.2f);
             gun.transform.localScale = Vector3.one * 0.4f;
             Transform model = gun.transform;
             var alongZ = Quaternion.Euler(90f, 0f, 0f);   // cylinders stand along Y; lay them along the barrel
+            var stockTilt = Quaternion.Euler(8f, 0f, 0f);
 
+            // Black, white and black in bands along the barrel, like the concept art.
             Part(PrimitiveType.Cube, "Receiver", model, new Vector3(0f, 0f, 0f), new Vector3(0.07f, 0.11f, 0.28f), kit.GunMetal);
-            Part(PrimitiveType.Cylinder, "Barrel", model, new Vector3(0f, 0.03f, 0.43f), new Vector3(0.045f, 0.32f, 0.045f), kit.GunMetal, alongZ);
-            Part(PrimitiveType.Cylinder, "Magazine Tube", model, new Vector3(0f, -0.02f, 0.36f), new Vector3(0.04f, 0.25f, 0.04f), kit.GunMetal, alongZ);
-            Part(PrimitiveType.Cube, "Forend", model, new Vector3(0f, -0.03f, 0.3f), new Vector3(0.062f, 0.055f, 0.2f), kit.GunWood);
-            Part(PrimitiveType.Cube, "Stock", model, new Vector3(0f, -0.05f, -0.27f), new Vector3(0.06f, 0.12f, 0.3f), kit.GunWood, Quaternion.Euler(8f, 0f, 0f));
+            Part(PrimitiveType.Cube, "Receiver Top", model, new Vector3(0f, 0.0575f, 0.02f), new Vector3(0.072f, 0.015f, 0.2f), kit.GunShell);
+            Part(PrimitiveType.Cube, "Barrel", model, new Vector3(0f, 0.0575f, 0.375f), new Vector3(0.045f, 0.025f, 0.47f), kit.GunMetal);
+            Part(PrimitiveType.Cube, "Barrel Shroud", model, new Vector3(0f, 0.0225f, 0.36f), new Vector3(0.062f, 0.045f, 0.44f), kit.GunShell);
+            Part(PrimitiveType.Cube, "Under Barrel", model, new Vector3(0f, -0.0225f, 0.32f), new Vector3(0.05f, 0.045f, 0.36f), kit.GunMetal);
+            Part(PrimitiveType.Cube, "Muzzle Collar", model, new Vector3(0f, 0.005f, 0.63f), new Vector3(0.075f, 0.12f, 0.04f), kit.GunMetal);
+            Part(PrimitiveType.Cube, "Stock", model, new Vector3(0f, -0.05f, -0.27f), new Vector3(0.06f, 0.12f, 0.3f), kit.GunShell, stockTilt);
+            Part(PrimitiveType.Cube, "Butt Pad", model, new Vector3(0f, -0.029f, -0.425f), new Vector3(0.064f, 0.125f, 0.015f), kit.GunMetal, stockTilt);
 
-            // Three vents along the top of the barrel glow as heat builds.
-            var vents = new Renderer[3];
-            for (int i = 0; i < vents.Length; i++)
-                vents[i] = Part(PrimitiveType.Cube, "Heat Vent " + (i + 1), model, new Vector3(0f, 0.058f, 0.2f + 0.1f * i),
-                                new Vector3(0.05f, 0.012f, 0.045f), kit.HeatVent).GetComponent<Renderer>();
+            // Three emitters stacked at the muzzle, and a light on the receiver's left side, the side you see.
+            // They glow with the gun's charge and heat.
+            var glowParts = new Renderer[4];
+            var tips = new Transform[3];
+            for (int i = 0; i < 3; i++)
+            {
+                float y = 0.045f - 0.04f * i;
+                glowParts[i] = Part(PrimitiveType.Cylinder, "Emitter " + (i + 1), model, new Vector3(0f, y, 0.69f),
+                                    new Vector3(0.028f, 0.05f, 0.028f), kit.EnergyGlow, alongZ).GetComponent<Renderer>();
+                tips[i] = new GameObject("Emitter Tip " + (i + 1)).transform;
+                tips[i].SetParent(model, false);
+                tips[i].localPosition = new Vector3(0f, y, 0.745f);
+            }
+            glowParts[3] = Part(PrimitiveType.Cube, "Receiver Light", model, new Vector3(-0.036f, 0.005f, 0.05f),
+                                new Vector3(0.006f, 0.022f, 0.07f), kit.EnergyGlow).GetComponent<Renderer>();
 
             var lever = new GameObject("Lever").transform;   // pivots at the front of the loop
             lever.SetParent(model, false);
             lever.localPosition = new Vector3(0f, -0.055f, 0.05f);
             Part(PrimitiveType.Cube, "Lever Loop", lever, new Vector3(0f, -0.045f, -0.06f), new Vector3(0.018f, 0.075f, 0.13f), kit.GunMetal);
 
-            var muzzle = new GameObject("Muzzle").transform;
-            muzzle.SetParent(model, false);
-            muzzle.localPosition = new Vector3(0f, 0.03f, 0.76f);
             var flashObject = new GameObject("Muzzle Flash");
-            flashObject.transform.SetParent(muzzle, false);
+            flashObject.transform.SetParent(model, false);
+            flashObject.transform.localPosition = new Vector3(0f, 0.005f, 0.77f);
             var flash = flashObject.AddComponent<Light>();
             flash.type = LightType.Point;
             flash.range = 8f;
-            flash.color = new Color(1f, 0.72f, 0.38f);
+            flash.color = new Color(0.45f, 0.9f, 1f);
             flash.intensity = 0f;
             flash.shadows = LightShadows.None;
 
-            var shotgun = gun.AddComponent<LeverShotgun>();
-            Wire(shotgun, "muzzle", muzzle);
+            var shotgun = gun.AddComponent<EnergyBlastShotgun>();
+            WireArray(shotgun, "emitters", tips);
             Wire(shotgun, "lever", lever);
             Wire(shotgun, "muzzleFlash", flash);
-            WireArray(shotgun, "heatVents", vents);
+            WireArray(shotgun, "glowParts", glowParts);
             return shotgun;
         }
 
@@ -201,10 +239,10 @@ namespace HyperInfinite
             Primitive(PrimitiveType.Cylinder, "Spawn Pad", level, SpawnPosition + new Vector3(0f, 0.01f, 0f),
                       new Vector3(3f, 0.01f, 3f), kit.Spawn, collider: false);
 
-            // Floor tints marking where each of the test areas are.
+            // Floor tints marking where each of the combat test areas goes.
             Zone(level, "Zone: Movement Yard", new Vector3(-28.5f, 0f, 2f), new Vector2(31f, 66f), kit.ZoneMovement);
             Zone(level, "Zone: Firing Range", new Vector3(0f, 0f, 16f), new Vector2(18f, 62f), kit.ZoneRange);
-            Zone(level, "Zone: Nest Garden", new Vector3(28.5f, 0f, 2f), new Vector2(31f, 66f), kit.ZoneNests);
+            Zone(level, "Zone: Egg Garden", new Vector3(28.5f, 0f, 2f), new Vector2(31f, 66f), kit.ZoneEggs);
 
             // A little cover around the spawn to walk around and hide behind.
             Block(kit, level, "Cover", new Vector3(-5f, 0.6f, -19f), new Vector3(3f, 1.2f, 1f));
@@ -339,9 +377,9 @@ namespace HyperInfinite
         class Kit
         {
             readonly Shader lit;
-            public readonly Material Floor, Wall, Block, Spawn, ZoneMovement, ZoneRange, ZoneNests;
+            public readonly Material Floor, Wall, Block, Spawn, ZoneMovement, ZoneRange, ZoneEggs;
             public readonly Material Movement, Ramp;
-            public readonly Material GunMetal, GunWood, HeatVent, Dummy, DummyTarget, RangeLine, FiringLine;
+            public readonly Material GunMetal, GunShell, EnergyGlow, Dummy, DummyTarget, RangeLine, FiringLine;
 
             public Kit()
             {
@@ -354,13 +392,13 @@ namespace HyperInfinite
                 Spawn = Lit("Spawn Pad", Hex(0x2aa7d6), 0.3f, Hex(0x0b4f66));
                 ZoneMovement = Lit("Zone Movement", Hex(0x41536f), 0.1f);
                 ZoneRange = Lit("Zone Range", Hex(0x6b6151), 0.1f);
-                ZoneNests = Lit("Zone Nests", Hex(0x5a4766), 0.1f);
+                ZoneEggs = Lit("Zone Eggs", Hex(0x5a4766), 0.1f);
                 Movement = Lit("Movement Block", Hex(0x4f6fa3), 0.15f);
                 Ramp = Lit("Ramp", Hex(0x6386c0), 0.15f);
-                GunMetal = Lit("Gun Metal", Hex(0x2f3238), 0.65f);
-                GunWood = Lit("Gun Wood", Hex(0x6b4428), 0.35f);
+                GunMetal = Lit("Gun Metal", Hex(0x1f2227), 0.65f);
+                GunShell = Lit("Gun Shell", Hex(0xe2e5ea), 0.55f);
                 // Emission stays switched on (with a glow too faint to see) so the gun can light it up from code.
-                HeatVent = Lit("Heat Vent", Hex(0x26272b), 0.5f, new Color(0.01f, 0.004f, 0.002f));
+                EnergyGlow = Lit("Energy Glow", Hex(0x15222b), 0.6f, new Color(0.002f, 0.008f, 0.012f));
                 Dummy = Lit("Dummy", Hex(0xc9b28a), 0.2f);
                 DummyTarget = Lit("Dummy Bullseye", Hex(0xd23a2e), 0.3f, Hex(0x3a0905));
                 RangeLine = Lit("Range Line", Hex(0xe8d9a0), 0.1f, Hex(0x3b351c));

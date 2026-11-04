@@ -33,7 +33,7 @@ namespace HyperInfinite
 
         Camera view;
         PlayerMotor motor;
-        LeverShotgun shotgun;
+        EnergyBlastShotgun shotgun;
         float pitch;   // degrees; positive looks down, as Unity rotates about X
         float recoil;  // degrees of upward kick that settles back down
         float eyeHeight, dip;
@@ -46,7 +46,7 @@ namespace HyperInfinite
             if (!controls) controls = GetComponentInParent<PlayerControls>();
             if (!body) body = controls ? controls.transform : transform.parent;
             motor = GetComponentInParent<PlayerMotor>();
-            shotgun = GetComponentInChildren<LeverShotgun>();
+            shotgun = GetComponentInChildren<EnergyBlastShotgun>();
             view.fieldOfView = fieldOfView;
             float x = transform.localEulerAngles.x;
             pitch = x > 180f ? x - 360f : x;

@@ -7,61 +7,62 @@ namespace HyperInfinite
     /// <summary>A summary of the last blast, for readouts and tuning.</summary>
     public struct ShotReport
     {
-        public int Pellets, PelletsOnTarget;
+        public int Bolts, BoltsOnTarget;
         public float Damage, Distance;
         public string Target;
         public float Time;
     }
 
     /// <summary>
-    /// COMBAT MECHANIC 1. John Infinite's Winchester Model 1887 (temp -> moving to energy blast), a lever-action
-    /// shotgun. Each blast sends a cone of pellets from the center of the screen; every pellet does
-    /// full damage up close and less further out. Between shots the lever has to cycle.
+    /// COMBAT MECHANIC 1. John Infinite's Energy Blast shotgun from the GDD: a lever-action
+    /// shotgun that fires heavy energy blasts instead of shells. Each blast sends a cone of energy bolts
+    /// from the center of the screen. Every bolt does full damage up close and less further out, so the
+    /// gun hits hardest up close. Between blasts the lever has to cycle.
     ///
-    /// Heat is the resource to manage. Every shot adds heat and the gun cools when rested. Reach
-    /// 100 and it overheats, locking up for a few seconds. Venting (R) dumps heat fast, but you
-    /// can't fire while it does. Aiming (right mouse) tightens the cone so more pellets land at range.
+    /// Heat is the only resource; there's no ammo. Every blast adds heat and the gun cools when rested.
+    /// Reach 100 and it overheats, locking up for a few seconds. Venting (R) dumps the heat early, but
+    /// you can't fire while it does. Aiming (right mouse) tightens the cone so more bolts land at range.
     ///
-    /// Put this on the gun model under the camera. Pellets fly from the camera's center, so they
-    /// land around the crosshair; tracers start at the muzzle so they look right.
-    /// Anything with an IDamageable component takes the hits.
+    /// Put this on the gun model under the camera. Bolts fly from the camera's center, so they land
+    /// around the crosshair; their streaks start at the emitters so they look right. Anything with an
+    /// IDamageable component takes the hits.
     /// </summary>
     [DisallowMultipleComponent]
-    public class LeverShotgun : MonoBehaviour
+    public class EnergyBlastShotgun : MonoBehaviour
     {
         [Header("Wiring")]
         [SerializeField] PlayerControls controls;
-        [Tooltip("Pellets fly from the center of this camera. Defaults to the camera above this object.")]
+        [Tooltip("Bolts fly from the center of this camera. Defaults to the camera above this object.")]
         [SerializeField] Transform aimOrigin;
-        [Tooltip("Tracers start here.")]
-        [SerializeField] Transform muzzle;
+        [Tooltip("The tips of the emitters. Bolt streaks start from them in turn. Without any, they start here.")]
+        [SerializeField] Transform[] emitters = new Transform[0];
         [Tooltip("Swings down and back while the lever cycles. Optional.")]
         [SerializeField] Transform lever;
-        [Tooltip("Lights up for each shot. Optional.")]
+        [Tooltip("Lights up for each blast. Optional.")]
         [SerializeField] Light muzzleFlash;
 
         [Header("Blast")]
-        [SerializeField, Range(1, 30)] int pellets = 9;
-        [Tooltip("Damage per pellet at close range.")]
-        [SerializeField, Min(0f)] float pelletDamage = 9f;
-        [Tooltip("Half-angle of the pellet cone, in degrees, firing from the hip.")]
+        [SerializeField, Range(1, 30)] int bolts = 9;
+        [Tooltip("Damage per bolt at close range.")]
+        [SerializeField, Min(0f)] float boltDamage = 9f;
+        [Tooltip("Half-angle of the bolt cone, in degrees, firing from the hip.")]
         [SerializeField, Range(0f, 20f)] float hipSpread = 5.7f;
         [SerializeField, Min(1f)] float range = 70f;
-        [Tooltip("Pellets do full damage out to this distance...")]
+        [Tooltip("Bolts do full damage out to this distance...")]
         [SerializeField, Min(0f)] float falloffStart = 6f;
         [Tooltip("...then less and less, down to the minimum at this distance and beyond.")]
         [SerializeField, Min(0f)] float falloffEnd = 26f;
-        [Tooltip("Share of the damage a pellet still does past the falloff end.")]
+        [Tooltip("Share of the damage a bolt still does past the falloff end.")]
         [SerializeField, Range(0f, 1f)] float falloffMinimum = 0.3f;
 
         [Header("Lever action")]
-        [Tooltip("Seconds from one shot to the next while the lever cycles.")]
+        [Tooltip("Seconds from one blast to the next while the lever cycles.")]
         [SerializeField, Min(0.05f)] float cycleTime = 0.55f;
         [Tooltip("Holding the trigger fires again as soon as the lever has cycled.")]
         [SerializeField] bool holdToRefire = true;
 
         [Header("Aiming (hold Aim)")]
-        [Tooltip("Half-angle of the pellet cone while aiming, in degrees.")]
+        [Tooltip("Half-angle of the bolt cone while aiming, in degrees.")]
         [SerializeField, Range(0f, 20f)] float aimSpread = 2.6f;
         [Tooltip("Where the gun sits while aiming, relative to the camera.")]
         [SerializeField] Vector3 aimPosition = new Vector3(0f, -0.065f, 0.17f);
@@ -69,7 +70,7 @@ namespace HyperInfinite
         [SerializeField, Min(0.1f)] float aimSpeed = 6f;
 
         [Header("Heat")]
-        [Tooltip("Heat each shot adds. The gun overheats at 100, so 21 allows four quick shots and the fifth overheats.")]
+        [Tooltip("Heat each blast adds. The gun overheats at 100, so 21 allows four quick blasts and the fifth overheats.")]
         [SerializeField, Range(1f, 100f)] float heatPerShot = 21f;
         [Tooltip("Heat lost per second while the gun rests.")]
         [SerializeField, Min(0f)] float coolingRate = 22f;
@@ -81,25 +82,29 @@ namespace HyperInfinite
         [SerializeField, Min(1f)] float ventRate = 140f;
 
         [Header("Recoil")]
-        [Tooltip("Degrees the view kicks up per shot from the hip.")]
+        [Tooltip("Degrees the view kicks up per blast from the hip.")]
         [SerializeField, Range(0f, 15f)] float recoilHip = 4.6f;
-        [Tooltip("Degrees the view kicks up per shot while aiming.")]
+        [Tooltip("Degrees the view kicks up per blast while aiming.")]
         [SerializeField, Range(0f, 15f)] float recoilAim = 2.9f;
 
-        [Header("Heat glow")]
-        [Tooltip("Renderers that glow as the gun heats up. Their material needs emission switched on.")]
-        [SerializeField] Renderer[] heatVents = new Renderer[0];
+        [Header("Energy glow")]
+        [Tooltip("Renderers that glow with the gun's charge and heat: the emitters and the receiver light. Their material needs emission switched on.")]
+        [SerializeField] Renderer[] glowParts = new Renderer[0];
+        [Tooltip("Ready to fire and cool.")]
+        [SerializeField, ColorUsage(false, true)] Color chargedGlow = new Color(0.3f, 1.5f, 2.4f);
+        [Tooltip("Close to overheating.")]
         [SerializeField, ColorUsage(false, true)] Color hotGlow = new Color(2.6f, 0.75f, 0.15f);
         [SerializeField, ColorUsage(false, true)] Color overheatGlow = new Color(3.5f, 0.25f, 0.08f);
 
         [Header("Effects")]
-        [SerializeField] Color tracerColor = new Color(1f, 0.85f, 0.45f, 0.9f);
-        [SerializeField] Color sparkColor = new Color(1f, 0.75f, 0.35f, 1f);
-        [Tooltip("Sparks where a pellet hits something that takes damage.")]
+        [SerializeField] Color boltColor = new Color(0.45f, 0.95f, 1f, 0.95f);
+        [SerializeField] Color sparkColor = new Color(0.65f, 0.95f, 1f, 1f);
+        [Tooltip("Sparks where a bolt hits something that takes damage.")]
         [SerializeField] Color hitColor = new Color(0.55f, 1f, 0.35f, 1f);
         [SerializeField, Min(0f)] float flashIntensity = 3f;
 
         [Header("Events (hook sounds up here)")]
+        [Tooltip("A blast went off: the GDD's deep, cracking boom.")]
         public UnityEvent onFire = new UnityEvent();
         [Tooltip("The trigger was pulled while the gun couldn't fire: overheated or venting.")]
         public UnityEvent onDryFire = new UnityEvent();
@@ -115,7 +120,7 @@ namespace HyperInfinite
             public IDamageable target;
             public string name;
             public float damage, distance;
-            public int pellets;
+            public int bolts;
             public Vector3 point;
         }
 
@@ -124,11 +129,12 @@ namespace HyperInfinite
         Vector3 restPosition;
         Quaternion restRotation, leverRest;
         float cycleTimer, kick, flash, heat, overheatTimer;
+        int nextEmitter;
         bool venting;
 
-        public int Pellets => pellets;
+        public int Bolts => bolts;
         public float MaxRange => range;
-        /// <summary>Half-angle of the pellet cone right now, in degrees: it tightens as the gun comes up to aim.</summary>
+        /// <summary>Half-angle of the bolt cone right now, in degrees: it tightens as the gun comes up to aim.</summary>
         public float Spread => Mathf.Lerp(hipSpread, aimSpread, AimBlend);
         public bool IsCycling => cycleTimer > 0f;
         public bool IsOverheated => overheatTimer > 0f;
@@ -136,6 +142,8 @@ namespace HyperInfinite
         public bool CanFire => !IsCycling && !IsOverheated && !venting;
         /// <summary>0 cold, 1 about to overheat.</summary>
         public float Heat01 => heat / 100f;
+        /// <summary>True when the next blast would overheat the gun, so the heat gauge can flash a warning.</summary>
+        public bool AboutToOverheat => !IsOverheated && !venting && heat + heatPerShot >= 100f;
         /// <summary>Seconds left before an overheated gun works again.</summary>
         public float OverheatRemaining => Mathf.Max(0f, overheatTimer);
         public bool IsAiming { get; private set; }
@@ -143,8 +151,8 @@ namespace HyperInfinite
         public float AimBlend { get; private set; }
         public ShotReport LastShot { get; private set; }
 
-        /// <summary>What one pellet does at this distance.</summary>
-        public float DamageAt(float distance) => pelletDamage * Falloff(distance);
+        /// <summary>What one bolt does at this distance.</summary>
+        public float DamageAt(float distance) => boltDamage * Falloff(distance);
 
         void Awake()
         {
@@ -154,7 +162,6 @@ namespace HyperInfinite
                 var view = GetComponentInParent<Camera>();
                 aimOrigin = view ? view.transform : transform;
             }
-            if (!muzzle) muzzle = transform;
             restPosition = transform.localPosition;
             restRotation = transform.localRotation;
             if (lever) leverRest = lever.localRotation;
@@ -226,18 +233,17 @@ namespace HyperInfinite
             kick = 1f;
             flash = flashIntensity;
             heat = Mathf.Min(100f, heat + heatPerShot);
-            bool overheatedNow = heat >= 100f;   // the shot that overheats still goes off
+            bool overheatedNow = heat >= 100f;   // the blast that overheats still goes off
             if (overheatedNow) overheatTimer = overheatLockout;
 
             Physics.SyncTransforms();   // targets moved this frame; make sure the rays see where they are now
             Transform shooter = controls ? controls.transform : transform.root;
             Vector3 origin = aimOrigin.position, forward = aimOrigin.forward, right = aimOrigin.right, up = aimOrigin.up;
-            Vector3 muzzlePoint = muzzle.position;
             float spread = Mathf.Tan(Spread * Mathf.Deg2Rad);
 
             pending.Clear();
             int landed = 0;
-            for (int i = 0; i < pellets; i++)
+            for (int i = 0; i < bolts; i++)
             {
                 Vector2 offset = Random.insideUnitCircle * spread;   // spread evenly over the cone
                 Vector3 dir = (forward + right * offset.x + up * offset.y).normalized;
@@ -254,18 +260,18 @@ namespace HyperInfinite
                     }
                     else StreakFx.Sparks(hit.point, hit.normal, sparkColor, 2, 6f, 0.22f);
                 }
-                StreakFx.Tracer(muzzlePoint, end, tracerColor, 0.02f, 0.09f);
+                StreakFx.Tracer(NextEmitter().position, end, boltColor, 0.035f, 0.11f);
             }
 
-            // One hit per target with all its pellets added up, so a target sees the whole blast at once.
-            var report = new ShotReport { Pellets = pellets, PelletsOnTarget = landed, Time = Time.time, Target = "" };
+            // One hit per target with all its bolts added up, so a target sees the whole blast at once.
+            var report = new ShotReport { Bolts = bolts, BoltsOnTarget = landed, Time = Time.time, Target = "" };
             float most = -1f;
             foreach (Pending p in pending)
             {
                 p.target.TakeDamage(new DamageInfo
                 {
                     Amount = p.damage, Kind = DamageKind.Shotgun, Point = p.point, Direction = forward,
-                    Distance = p.distance, Hits = p.pellets, Source = shooter.gameObject,
+                    Distance = p.distance, Hits = p.bolts, Source = shooter.gameObject,
                 });
                 report.Damage += p.damage;
                 if (p.damage > most)
@@ -281,6 +287,16 @@ namespace HyperInfinite
             if (overheatedNow) onOverheat.Invoke();
         }
 
+        /// <summary>The emitter tip the next bolt streak starts from, taking turns.</summary>
+        Transform NextEmitter()
+        {
+            if (emitters.Length == 0) return transform;
+            if (nextEmitter >= emitters.Length) nextEmitter = 0;   // the array was shortened in the Inspector
+            Transform tip = emitters[nextEmitter];
+            nextEmitter = (nextEmitter + 1) % emitters.Length;
+            return tip ? tip : transform;
+        }
+
         void Add(IDamageable target, RaycastHit hit, float damage)
         {
             for (int i = 0; i < pending.Count; i++)
@@ -288,7 +304,7 @@ namespace HyperInfinite
                 if (!ReferenceEquals(pending[i].target, target)) continue;
                 Pending p = pending[i];
                 p.damage += damage;
-                p.pellets++;
+                p.bolts++;
                 pending[i] = p;
                 return;
             }
@@ -296,23 +312,29 @@ namespace HyperInfinite
             pending.Add(new Pending
             {
                 target = target, name = component ? component.name : "target", damage = damage,
-                distance = hit.distance, pellets = 1, point = hit.point,
+                distance = hit.distance, bolts = 1, point = hit.point,
             });
         }
 
+        /// <summary>
+        /// The emitters glow cyan when the gun is charged and cool. A blast drains them and they charge back
+        /// up while the lever cycles. As heat builds they run amber, and they flicker red while overheated.
+        /// </summary>
         void Glow()
         {
-            if (heatVents.Length == 0) return;
+            if (glowParts.Length == 0) return;
             Color glow;
             if (IsOverheated) glow = overheatGlow * (0.7f + 0.3f * Mathf.Sin(Time.time * 40f));   // flickers while locked
             else
             {
                 float h = Heat01;
-                glow = hotGlow * (h * h);   // stays dark until it's properly warm
+                glow = Color.Lerp(chargedGlow, hotGlow, h * h);   // stays cyan until it's properly warm
+                float charge = cycleTimer > 0f && cycleTime > 0f ? 1f - cycleTimer / cycleTime : 1f;
+                glow *= Mathf.Lerp(0.25f, 1f, charge);
             }
             glowBlock.SetColor("_EmissionColor", glow);
-            foreach (Renderer vent in heatVents)
-                if (vent) vent.SetPropertyBlock(glowBlock);
+            foreach (Renderer part in glowParts)
+                if (part) part.SetPropertyBlock(glowBlock);
         }
 
         float Falloff(float distance)
@@ -321,11 +343,11 @@ namespace HyperInfinite
             return Mathf.Lerp(1f, falloffMinimum, (distance - falloffStart) / (falloffEnd - falloffStart));
         }
 
-        /// <summary>The gun comes up to aim, kicks back on each shot, then the lever swings down and back. The vents glow with heat.</summary>
+        /// <summary>The gun comes up to aim, kicks back on each blast, then the lever swings down and back. The emitters glow with charge and heat.</summary>
         void Animate(float dt)
         {
             kick = Mathf.Max(0f, kick - dt * 5f);
-            float k = kick * kick * (1f - 0.5f * AimBlend);   // aimed shots kick less
+            float k = kick * kick * (1f - 0.5f * AimBlend);   // aimed blasts kick less
             const float leverThrow = 0.35f;   // the last part of the cycle
             float leverSwing = cycleTimer > 0f && cycleTimer < leverThrow
                 ? Mathf.Sin((leverThrow - cycleTimer) / leverThrow * Mathf.PI) : 0f;

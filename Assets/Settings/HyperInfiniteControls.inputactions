@@ -87,16 +87,6 @@
                     "priority": 0
                 },
                 {
-                    "name": "Interact",
-                    "type": "Button",
-                    "id": "f1d71471-8b48-59bd-8464-4f2c46ea4cb9",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false,
-                    "priority": 0
-                },
-                {
                     "name": "Pause",
                     "type": "Button",
                     "id": "91f36788-2491-54de-82d2-1225a5c494f6",
@@ -237,17 +227,6 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Melee",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "71989792-e2ab-5865-9afb-95b2ef810f80",
-                    "path": "<Keyboard>/e",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Keyboard&Mouse",
-                    "action": "Interact",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
