@@ -28,7 +28,7 @@ namespace HyperInfinite
         int next;
         Material material;
 
-        /// <summary>A streak racing from <paramref name="from"/> to <paramref name="to"/>, like a pellet's path.</summary>
+        /// <summary>A streak racing from <paramref name="from"/> to <paramref name="to"/>, like an energy bolt's path.</summary>
         public static void Tracer(Vector3 from, Vector3 to, Color color, float width = 0.02f, float life = 0.09f)
         {
             var fx = Get();
@@ -56,7 +56,7 @@ namespace HyperInfinite
             }
         }
 
-        /// <summary>A splash thrown out in every direction, leaning upward: eggs bursting, larvae splatting.</summary>
+        /// <summary>A splash thrown out in every direction, leaning upward: eggs erupting, Scuttlers splatting.</summary>
         public static void Burst(Vector3 center, Color color, int count, float speed = 6f, float life = 0.45f)
         {
             var fx = Get();

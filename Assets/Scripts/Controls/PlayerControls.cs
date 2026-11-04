@@ -9,10 +9,11 @@ namespace HyperInfinite
 {
     /// <summary>
     /// CONTROLS. The one place gameplay reads input from. It uses Unity's Input System
-    /// with the HyperInfiniteControls actions asset (Assets/Settings), which holds every keyboard,
-    /// mouse and gamepad binding. To rebind, double-click that asset and edit it in the Input Actions
-    /// editor; no code changes. Every other script asks this component what the player wants to do
-    /// this frame (move, look, jump, fire...).
+    /// with the HyperInfiniteControls actions asset (Assets/Settings), which holds every binding. The
+    /// keyboard and mouse ones follow the GDD's controls, and gamepad bindings come along as an extra.
+    /// To rebind, double-click that asset and edit it in the Input Actions editor; no code changes.
+    /// Every other script asks this component what the player wants to do this frame (move, look,
+    /// jump, fire...).
     /// </summary>
     [DefaultExecutionOrder(-100)]   // read input before anything uses it
     [DisallowMultipleComponent]
@@ -30,6 +31,10 @@ namespace HyperInfinite
         [SerializeField, Range(0.2f, 1f)] float aimLookScale = 0.7f;
         [SerializeField] bool invertY;
 
+        [Header("Melee")]
+        [Tooltip("Holding Melee at least this long, in seconds, makes a heavy punch instead of a quick hit.")]
+        [SerializeField, Range(0.1f, 1f)] float heavyMeleeHoldTime = 0.3f;
+
         [Header("Cursor")]
         [Tooltip("Hide and lock the cursor while playing. Clicking the game captures it; Pause frees it.")]
         [SerializeField] bool lockCursor = true;
@@ -45,8 +50,14 @@ namespace HyperInfinite
         public bool FireHeld { get; private set; }
         public bool AimHeld { get; private set; }
         public bool VentPressed { get; private set; }
-        public bool MeleePressed { get; private set; }
-        public bool InteractPressed { get; private set; }
+        /// <summary>True on the frame Melee is let go after a tap: a quick hit.</summary>
+        public bool QuickMeleePressed { get; private set; }
+        /// <summary>True on the frame Melee is let go after a hold: the heavy punch lands.</summary>
+        public bool HeavyMeleeReleased { get; private set; }
+        /// <summary>Seconds Melee has been held so far, while it's down; 0 otherwise. A heavy punch charges up with it.</summary>
+        public float MeleeHoldTime { get; private set; }
+        /// <summary>True while Melee has been held long enough that letting go throws a heavy punch.</summary>
+        public bool HeavyMeleeCharging => meleeDown && MeleeHoldTime >= heavyMeleeHoldTime;
         /// <summary>True on the frame Pause was pressed. It still reports while gameplay input is off, so a menu can close itself.</summary>
         public bool PausePressed { get; private set; }
         /// <summary>True when the gamepad was the last device used, for showing the right button prompts.</summary>
@@ -58,15 +69,28 @@ namespace HyperInfinite
         public bool IsLive { get; private set; }
         public bool CursorCaptured => Cursor.lockState == CursorLockMode.Locked;
 
+        /// <summary>Degrees turned per pixel of mouse travel. A settings menu can change it.</summary>
+        public float MouseSensitivity
+        {
+            get => mouseSensitivity;
+            set => mouseSensitivity = Mathf.Clamp(value, 0.01f, 0.6f);
+        }
+
+        /// <summary>The actions asset in use. A settings menu can rebind keys on it, and the change applies at once.</summary>
+        public InputActionAsset Actions => actions;
+
         InputActionMap player;
-        InputAction move, look, jump, dash, fire, aim, vent, melee, interact, pause;
+        InputAction move, look, jump, dash, fire, aim, vent, melee, pause;
         InputAction[] all;
+        bool meleeDown;
 
         void Awake()
         {
             if (!actions)
             {
-                Debug.LogError("PlayerControls needs the HyperInfiniteControls actions asset. Assign it in the Inspector, or rebuild the test level.", this);
+                Debug.LogError("PlayerControls on " + name + " has no Input Actions asset, so the player can't be controlled. " +
+                               "Drag Assets/Settings/HyperInfiniteControls into its Actions field. In the test level, " +
+                               "Hyper Infinite > Build Test Level does that for you.", this);
                 enabled = false;
                 return;
             }
@@ -79,9 +103,8 @@ namespace HyperInfinite
             aim = player.FindAction("Aim", throwIfNotFound: true);
             vent = player.FindAction("Vent", throwIfNotFound: true);
             melee = player.FindAction("Melee", throwIfNotFound: true);
-            interact = player.FindAction("Interact", throwIfNotFound: true);
             pause = player.FindAction("Pause", throwIfNotFound: true);
-            all = new[] { move, look, jump, dash, fire, aim, vent, melee, interact, pause };
+            all = new[] { move, look, jump, dash, fire, aim, vent, melee, pause };
         }
 
         void OnEnable()
@@ -137,8 +160,7 @@ namespace HyperInfinite
             FirePressed = fire.WasPressedThisFrame();
             FireHeld = fire.IsPressed();
             VentPressed = vent.WasPressedThisFrame();
-            MeleePressed = melee.WasPressedThisFrame();
-            InteractPressed = interact.WasPressedThisFrame();
+            ReadMelee();
         }
 
         /// <summary>Locks and hides the cursor for play, or frees it for menus.</summary>
@@ -165,6 +187,28 @@ namespace HyperInfinite
             return degrees;
         }
 
+        /// <summary>
+        /// The GDD's melee: tap Q for a quick hit, or hold it to charge a heavy punch that lands when you let
+        /// go. Both are decided on release, so one press never gives both.
+        /// </summary>
+        void ReadMelee()
+        {
+            QuickMeleePressed = HeavyMeleeReleased = false;
+            if (melee.WasPressedThisFrame())
+            {
+                meleeDown = true;
+                MeleeHoldTime = 0f;
+            }
+            if (!meleeDown) return;
+            MeleeHoldTime += Time.unscaledDeltaTime;
+            if (melee.IsPressed()) return;
+            // Let go, perhaps in the same frame it went down.
+            if (MeleeHoldTime >= heavyMeleeHoldTime) HeavyMeleeReleased = true;
+            else QuickMeleePressed = true;
+            meleeDown = false;
+            MeleeHoldTime = 0f;
+        }
+
         /// <summary>The control behind whichever action is in use right now, or null when nothing is.</summary>
         InputControl ControlInUse()
         {
@@ -177,7 +221,9 @@ namespace HyperInfinite
         {
             Move = Look = Vector2.zero;
             JumpPressed = JumpHeld = DashPressed = FirePressed = FireHeld = AimHeld = false;
-            VentPressed = MeleePressed = InteractPressed = false;
+            VentPressed = QuickMeleePressed = HeavyMeleeReleased = false;
+            MeleeHoldTime = 0f;
+            meleeDown = false;
             IsLive = false;
         }
     }
