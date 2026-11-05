@@ -7,6 +7,16 @@ namespace HyperInfinite
     public enum EggState { Dormant, Swelling, Spent }
 
     /// <summary>
+    /// For whatever Pulsating Eggs release. Implement it on the Scuttler (TempScuttler does) and the
+    /// eggs tell each one whom to chase and throw it out in a leap. Anything without it just appears
+    /// beside the eggs.
+    /// </summary>
+    public interface IHatchling
+    {
+        void Hatch(Transform target, Vector3 launchVelocity);
+    }
+
+    /// <summary>
     /// HAZARD 1. Pulsating Arachturn Eggs, which "erupt into a swarm of
     /// Scuttlers if shot, touched, or walked past".
     ///
@@ -14,6 +24,11 @@ namespace HyperInfinite
     /// its pulse quickens and reddens to show it. Fully awake, it swells for a moment (the warning) and
     /// then erupts. Touch it or shoot it and it erupts at once, with no warning. The eruption splashes and
     /// shoves anyone right next to it. Move away before it's fully awake and it settles down again.
+    /// 
+    /// HAZARD UNIQUE MECHANIC (1): The eruption releases a swarm of Scuttlers. The eggs
+    /// spawn whatever prefab is in Scuttler Prefab, so scuttler drops straight in; the test
+    /// level uses TempScuttler until then. Set them off from range with a blast and the swarm has to
+    /// cross open ground to reach you. Walk past and it bursts out at your feet.
     /// </summary>
     [DisallowMultipleComponent]
     public class PulsatingEggs : MonoBehaviour, IDamageable
@@ -45,6 +60,11 @@ namespace HyperInfinite
         [Tooltip("Knock-back from the eruption, in meters per second.")]
         [SerializeField, Min(0f)] float burstPush = 7f;
 
+        [Header("Swarm (the unique mechanic)")]
+        [Tooltip("What erupts out: Scuttler once it exists, Temp Scuttler until then.")]
+        [SerializeField] GameObject scuttlerPrefab;
+        [SerializeField, Range(0, 20)] int swarmSize = 6;
+
         [Header("Regrowing")]
         [Tooltip("Seconds until erupted eggs grow back. 0 means never; the test level uses 12.")]
         [SerializeField, Min(0f)] float regrowTime = 0f;
@@ -58,7 +78,7 @@ namespace HyperInfinite
         [Header("Events (hook sounds and effects up here)")]
         [Tooltip("They started swelling: the warning before they erupt.")]
         public UnityEvent onSwelling = new UnityEvent();
-        [Tooltip("They erupted.")]
+        [Tooltip("They erupted and released the swarm.")]
         public UnityEvent onErupt = new UnityEvent();
         public UnityEvent onRegrown = new UnityEvent();
 
@@ -99,6 +119,8 @@ namespace HyperInfinite
             }
             var first = eggRenderers.Length > 0 && eggRenderers[0] ? eggRenderers[0].sharedMaterial : null;
             if (first) eggColor = first.HasProperty("_BaseColor") ? first.GetColor("_BaseColor") : first.HasProperty("_Color") ? first.GetColor("_Color") : Color.white;
+            if (!scuttlerPrefab && swarmSize > 0)
+                Debug.LogWarning(name + ": these Pulsating Eggs have no Scuttler Prefab, so nothing will hatch out of them.", this);
         }
 
         void OnEnable() { All.Add(this); }
@@ -152,8 +174,8 @@ namespace HyperInfinite
         }
 
         /// <summary>
-        /// Erupts at once, splashing and shoving anyone right next to it. Shots and touches call this,
-        /// and level scripts can too.
+        /// Erupts at once, splashing and shoving anyone right next to it and releasing the swarm. Shots and
+        /// touches call this, and level scripts can too.
         /// </summary>
         public void Erupt()
         {
@@ -165,6 +187,7 @@ namespace HyperInfinite
             Vector3 center = transform.position + Vector3.up * 0.5f;
             StreakFx.Burst(center, gooColor, 26, 7f, 0.6f);
             Splash(center);
+            SpawnSwarm();
             onErupt.Invoke();
         }
 
@@ -241,6 +264,23 @@ namespace HyperInfinite
             Vector3 away = new Vector3(to.x, 0f, to.z);
             away = away.sqrMagnitude > 0.0001f ? away.normalized : transform.forward;
             if (pushable != null && burstPush > 0f) pushable.Push((away + Vector3.up * 0.45f) * (burstPush * closeness));
+        }
+
+        /// <summary>Scuttlers pour out all around the cluster. Any that implement IHatchling leap out and give chase.</summary>
+        void SpawnSwarm()
+        {
+            if (!scuttlerPrefab) return;
+            Transform target = Player();
+            for (int i = 0; i < swarmSize; i++)
+            {
+                float angle = (i + Random.value * 0.6f) / Mathf.Max(1, swarmSize) * Mathf.PI * 2f;
+                var dir = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                Vector3 at = transform.position + dir * 0.5f + Vector3.up * 0.4f;
+                GameObject scuttler = Instantiate(scuttlerPrefab, at, Quaternion.LookRotation(dir));
+                var hatchling = scuttler.GetComponent<IHatchling>();
+                if (hatchling != null)
+                    hatchling.Hatch(target, dir * Random.Range(2.5f, 4.5f) + Vector3.up * Random.Range(3.5f, 5.5f));
+            }
         }
 
         Transform Player()

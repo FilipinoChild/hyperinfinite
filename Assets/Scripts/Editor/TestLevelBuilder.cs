@@ -49,7 +49,8 @@ namespace HyperInfinite
             var kit = new Kit();
             var playerPrefab = BuildPlayerPrefab(kit, controlsAsset);
             var dummyPrefab = BuildDummyPrefab(kit);
-            var eggsPrefab = BuildEggsPrefab(kit);
+            var scuttlerPrefab = BuildScuttlerPrefab(kit);
+            var eggsPrefab = BuildEggsPrefab(kit, scuttlerPrefab);
 
             var level = new GameObject("Level").transform;
             BuildShell(kit, level);
@@ -342,9 +343,43 @@ namespace HyperInfinite
             go.isStatic = true;
         }
 
+        /// <summary>Scuttler: a small, dark red hatchling with glowing eyes and six legs.</summary>
+        static GameObject BuildScuttlerPrefab(Kit kit)
+        {
+            var root = new GameObject("Temp Scuttler");
+            var trigger = root.AddComponent<SphereCollider>();   // a trigger: shots hit it, the player walks through it
+            trigger.isTrigger = true;
+            trigger.radius = 0.32f;
+            trigger.center = new Vector3(0f, 0.22f, 0f);
+
+            var body = new GameObject("Body").transform;
+            body.SetParent(root.transform, false);
+            Primitive(PrimitiveType.Sphere, "Abdomen", body, new Vector3(0f, 0.2f, -0.06f), new Vector3(0.42f, 0.3f, 0.56f), kit.ScuttlerShell, collider: false);
+            Primitive(PrimitiveType.Sphere, "Head", body, new Vector3(0f, 0.24f, 0.3f), new Vector3(0.28f, 0.24f, 0.26f), kit.ScuttlerShell, collider: false);
+            Primitive(PrimitiveType.Sphere, "Eye Left", body, new Vector3(-0.07f, 0.29f, 0.41f), new Vector3(0.06f, 0.06f, 0.06f), kit.ScuttlerEye, collider: false);
+            Primitive(PrimitiveType.Sphere, "Eye Right", body, new Vector3(0.07f, 0.29f, 0.41f), new Vector3(0.06f, 0.06f, 0.06f), kit.ScuttlerEye, collider: false);
+            Primitive(PrimitiveType.Cube, "Mandible Left", body, new Vector3(-0.05f, 0.16f, 0.44f), new Vector3(0.025f, 0.025f, 0.11f), kit.ScuttlerEye, collider: false);
+            Primitive(PrimitiveType.Cube, "Mandible Right", body, new Vector3(0.05f, 0.16f, 0.44f), new Vector3(0.025f, 0.025f, 0.11f), kit.ScuttlerEye, collider: false);
+            // Three legs a side, splayed forward, out and back, and angled down to the ground.
+            for (int i = 0; i < 3; i++)
+            {
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    var leg = Primitive(PrimitiveType.Cube, (side < 0 ? "Leg Left " : "Leg Right ") + (i + 1), body,
+                                        new Vector3(side * 0.24f, 0.14f, 0.12f - 0.16f * i), new Vector3(0.26f, 0.025f, 0.03f),
+                                        kit.ScuttlerShell, collider: false);
+                    leg.transform.localRotation = Quaternion.Euler(0f, side * (i - 1) * 25f, side * -25f);
+                }
+            }
+
+            var scuttler = root.AddComponent<TempScuttler>();
+            Wire(scuttler, "body", body);
+            return SavePrefab(root, "Testing", "Temp Scuttler");
+        }
+
         // ---- The hazard ------------------------------------------------------------------
 
-        static GameObject BuildEggsPrefab(Kit kit)
+        static GameObject BuildEggsPrefab(Kit kit, GameObject scuttlerPrefab)
         {
             var root = new GameObject("Pulsating Eggs");
             var hitbox = root.AddComponent<SphereCollider>();
@@ -372,6 +407,7 @@ namespace HyperInfinite
             var pulsatingEggs = root.AddComponent<PulsatingEggs>();
             WireArray(pulsatingEggs, "eggs", eggs);
             Wire(pulsatingEggs, "hitbox", hitbox);
+            Wire(pulsatingEggs, "scuttlerPrefab", scuttlerPrefab);
             return SavePrefab(root, "Hazards", "Pulsating Eggs");
         }
 
@@ -448,7 +484,7 @@ namespace HyperInfinite
             public readonly Material Floor, Wall, Block, Spawn, ZoneMovement, ZoneRange, ZoneEggs;
             public readonly Material Movement, Ramp;
             public readonly Material GunMetal, GunShell, EnergyGlow, Dummy, DummyTarget, RangeLine, FiringLine;
-            public readonly Material EggShell, EggGoo;
+            public readonly Material EggShell, EggGoo, ScuttlerShell, ScuttlerEye;
 
             public Kit()
             {
@@ -474,6 +510,8 @@ namespace HyperInfinite
                 FiringLine = Lit("Firing Line", Hex(0xe0473a), 0.1f, Hex(0x5a0e08));
                 EggShell = Lit("Egg Shell", Hex(0x8a5a9c), 0.75f, new Color(0.04f, 0.01f, 0.06f));   // the eggs drive the glow
                 EggGoo = Lit("Egg Goo", Hex(0x3a2244), 0.85f);
+                ScuttlerShell = Lit("Scuttler Shell", Hex(0x6e1f1a), 0.5f);
+                ScuttlerEye = Lit("Scuttler Eye", Hex(0x40100c), 0.6f, Hex(0xff6a2a));
             }
 
             public Material Lit(string name, Color color, float smoothness, Color? glow = null)
