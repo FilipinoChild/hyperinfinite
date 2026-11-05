@@ -49,11 +49,13 @@ namespace HyperInfinite
             var kit = new Kit();
             var playerPrefab = BuildPlayerPrefab(kit, controlsAsset);
             var dummyPrefab = BuildDummyPrefab(kit);
+            var eggsPrefab = BuildEggsPrefab(kit);
 
             var level = new GameObject("Level").transform;
             BuildShell(kit, level);
             BuildMovementYard(kit, level);
             BuildFiringRange(kit, level, dummyPrefab);
+            BuildEggGarden(kit, level, eggsPrefab);
 
             var spawn = new GameObject("Spawn Point").transform;
             spawn.position = SpawnPosition;
@@ -61,6 +63,8 @@ namespace HyperInfinite
             player.transform.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
 
             new GameObject("Debug HUD (temporary)").AddComponent<TempDebugHud>();
+            var respawner = new GameObject("Respawner (temporary)").AddComponent<TempRespawner>();
+            Wire(respawner, "spawnPoint", spawn);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -114,6 +118,7 @@ namespace HyperInfinite
             var controls = root.AddComponent<PlayerControls>();
             Wire(controls, "actions", controlsAsset);
             root.AddComponent<PlayerMotor>();
+            root.AddComponent<Health>();
 
             // Casts the player's shadow without getting in the first-person view.
             var shadow = Primitive(PrimitiveType.Capsule, "Shadow Body", root.transform, new Vector3(0f, 0.9f, 0f),
@@ -134,7 +139,7 @@ namespace HyperInfinite
         }
 
         /// <summary>
-        /// The Energy Blast shotgun from the GDD's concept art: a white and black lever-action body with three
+        /// The Energy Blast shotgun: a white and black lever-action body with three
         /// energy emitters stacked at the muzzle. It's built at roughly real size and then shrunk to 40% close to
         /// the eye, which looks the same as a full-size gun further away and pokes into walls far less.
         /// </summary>
@@ -337,6 +342,69 @@ namespace HyperInfinite
             go.isStatic = true;
         }
 
+        // ---- The hazard ------------------------------------------------------------------
+
+        static GameObject BuildEggsPrefab(Kit kit)
+        {
+            var root = new GameObject("Pulsating Eggs");
+            var hitbox = root.AddComponent<SphereCollider>();
+            hitbox.radius = 0.85f;
+            hitbox.center = new Vector3(0f, 0.5f, 0f);
+            var goo = Primitive(PrimitiveType.Cylinder, "Goo", root.transform, new Vector3(0f, 0.012f, 0f), new Vector3(2.2f, 0.012f, 2.2f), kit.EggGoo, collider: false);
+            goo.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+
+            // A tall egg in the middle and five around it, leaning outward.
+            var cluster = new GameObject("Eggs").transform;
+            cluster.SetParent(root.transform, false);
+            var eggs = new Transform[6];
+            eggs[0] = Primitive(PrimitiveType.Sphere, "Egg 1", cluster, new Vector3(0f, 0.45f, 0f), new Vector3(0.55f, 0.8f, 0.55f), kit.EggShell, collider: false).transform;
+            float[] sizes = { 1f, 0.86f, 1.08f, 0.92f, 0.98f };
+            for (int i = 0; i < 5; i++)
+            {
+                float angle = (i * 72f + 15f) * Mathf.Deg2Rad;
+                var outward = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                var egg = Primitive(PrimitiveType.Sphere, "Egg " + (i + 2), cluster, outward * 0.42f + Vector3.up * 0.3f * sizes[i],
+                                    new Vector3(0.42f, 0.58f, 0.42f) * sizes[i], kit.EggShell, collider: false).transform;
+                egg.localRotation = Quaternion.AngleAxis(20f, Vector3.Cross(Vector3.up, outward));
+                eggs[i + 1] = egg;
+            }
+
+            var pulsatingEggs = root.AddComponent<PulsatingEggs>();
+            WireArray(pulsatingEggs, "eggs", eggs);
+            Wire(pulsatingEggs, "hitbox", hitbox);
+            return SavePrefab(root, "Hazards", "Pulsating Eggs");
+        }
+
+        /// <summary>
+        /// East of the spawn: eggs in the open, behind a low wall, up on a ledge, and three clusters close
+        /// together. They grow back after 12 seconds here, so they can be tested again and again.
+        /// </summary>
+        static void BuildEggGarden(Kit kit, Transform level, GameObject eggsPrefab)
+        {
+            var garden = new GameObject("Egg Garden").transform;
+            garden.SetParent(level, false);
+
+            Eggs(eggsPrefab, garden, "Eggs: Open Ground", new Vector3(22f, 0f, -16f));
+            Block(kit, garden, "Low Wall (1.1 m)", new Vector3(30f, 0.55f, -2f), new Vector3(6f, 1.1f, 0.5f));
+            Eggs(eggsPrefab, garden, "Eggs: Behind Cover", new Vector3(30f, 0f, 1.5f));
+            Block(kit, garden, "Egg Ledge 1.5 m", new Vector3(38f, 0.75f, 14f), new Vector3(6f, 1.5f, 6f), kit.Movement);
+            Eggs(eggsPrefab, garden, "Eggs: On the Ledge", new Vector3(38f, 1.5f, 14f));
+            Eggs(eggsPrefab, garden, "Eggs: Cluster A", new Vector3(21f, 0f, 18f));
+            Eggs(eggsPrefab, garden, "Eggs: Cluster B", new Vector3(24f, 0f, 20.5f));
+            Eggs(eggsPrefab, garden, "Eggs: Cluster C", new Vector3(20.5f, 0f, 22f));
+            Block(kit, garden, "Pillar", new Vector3(17f, 1.5f, 4f), new Vector3(1.2f, 3f, 1.2f));
+            Block(kit, garden, "Pillar", new Vector3(28f, 1.5f, 28f), new Vector3(1.2f, 3f, 1.2f));
+        }
+
+        static void Eggs(GameObject prefab, Transform parent, string name, Vector3 position)
+        {
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            go.name = name;
+            go.transform.localPosition = position;
+            var eggs = go.GetComponent<PulsatingEggs>();
+            WireFloat(eggs, "regrowTime", 12f);
+        }
+
         static void SetUpSun()
         {
             var sun = Object.FindAnyObjectByType<Light>();
@@ -380,6 +448,7 @@ namespace HyperInfinite
             public readonly Material Floor, Wall, Block, Spawn, ZoneMovement, ZoneRange, ZoneEggs;
             public readonly Material Movement, Ramp;
             public readonly Material GunMetal, GunShell, EnergyGlow, Dummy, DummyTarget, RangeLine, FiringLine;
+            public readonly Material EggShell, EggGoo;
 
             public Kit()
             {
@@ -403,6 +472,8 @@ namespace HyperInfinite
                 DummyTarget = Lit("Dummy Bullseye", Hex(0xd23a2e), 0.3f, Hex(0x3a0905));
                 RangeLine = Lit("Range Line", Hex(0xe8d9a0), 0.1f, Hex(0x3b351c));
                 FiringLine = Lit("Firing Line", Hex(0xe0473a), 0.1f, Hex(0x5a0e08));
+                EggShell = Lit("Egg Shell", Hex(0x8a5a9c), 0.75f, new Color(0.04f, 0.01f, 0.06f));   // the eggs drive the glow
+                EggGoo = Lit("Egg Goo", Hex(0x3a2244), 0.85f);
             }
 
             public Material Lit(string name, Color color, float smoothness, Color? glow = null)

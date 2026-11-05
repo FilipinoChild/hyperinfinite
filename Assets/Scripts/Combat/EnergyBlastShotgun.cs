@@ -14,7 +14,7 @@ namespace HyperInfinite
     }
 
     /// <summary>
-    /// COMBAT MECHANIC 1. John Infinite's Energy Blast shotgun from the GDD: a lever-action
+    /// COMBAT MECHANIC 1. John Infinite's Energy Blast shotgun: a lever-action
     /// shotgun that fires heavy energy blasts instead of shells. Each blast sends a cone of energy bolts
     /// from the center of the screen. Every bolt does full damage up close and less further out, so the
     /// gun hits hardest up close. Between blasts the lever has to cycle.
@@ -104,7 +104,7 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float flashIntensity = 3f;
 
         [Header("Events (hook sounds up here)")]
-        [Tooltip("A blast went off: the GDD's deep, cracking boom.")]
+        [Tooltip("A blast went off: deep, cracking boom.")]
         public UnityEvent onFire = new UnityEvent();
         [Tooltip("The trigger was pulled while the gun couldn't fire: overheated or venting.")]
         public UnityEvent onDryFire = new UnityEvent();
