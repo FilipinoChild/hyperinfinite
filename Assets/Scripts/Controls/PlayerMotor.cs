@@ -12,7 +12,7 @@ namespace HyperInfinite
     [RequireComponent(typeof(CharacterController))]
     [DefaultExecutionOrder(-20)]   // after input and the camera's turn, before shooting
     [DisallowMultipleComponent]
-    public class PlayerMotor : MonoBehaviour
+    public class PlayerMotor : MonoBehaviour, IPushable
     {
         [SerializeField] PlayerControls controls;
 
@@ -150,6 +150,17 @@ namespace HyperInfinite
             dashTimer = dashCooldownTimer = coyoteTimer = jumpBufferTimer = airTime = 0f;
             airJumpsUsed = 0;
             IsGrounded = false;
+        }
+
+        /// <summary>Knock-back from blasts, in meters per second. An upward push lifts you off the ground.</summary>
+        public void Push(Vector3 velocityChange)
+        {
+            velocity += velocityChange;
+            if (velocityChange.y > 0f)
+            {
+                IsGrounded = false;
+                coyoteTimer = 0f;
+            }
         }
 
         bool TryJump(bool freshPress)

@@ -20,6 +20,8 @@ namespace HyperInfinite
         PlayerControls controls;
         PlayerMotor motor;
         EnergyBlastShotgun shotgun;
+        Health health;
+        TempRespawner respawner;
         Camera view;
         string lookingAt = "";
         float lookingAtDistance = -1f;
@@ -66,6 +68,8 @@ namespace HyperInfinite
             if (!controls) controls = FindAnyObjectByType<PlayerControls>();
             if (!motor) motor = FindAnyObjectByType<PlayerMotor>();
             if (!shotgun) shotgun = FindAnyObjectByType<EnergyBlastShotgun>();
+            if (!health && controls) health = controls.GetComponent<Health>();
+            if (!respawner) respawner = FindAnyObjectByType<TempRespawner>();
             if (!view && controls) view = controls.GetComponentInChildren<Camera>();
         }
 
@@ -78,9 +82,12 @@ namespace HyperInfinite
             float width = Screen.width / scale, height = 1080f;
 
             var center = new Vector2(width * 0.5f, height * 0.5f);
+            if (health) DrawHurt(width, height);
+            DrawEggMarkers(scale);
             DrawCrosshair(center, shotgun ? Mathf.Max(6f, AngleToPixels(shotgun.Spread)) : 6f);
             if (shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f) DrawHitMarker(center);
             if (shotgun) DrawHeatGauge(new Vector2(center.x, center.y + 96f));   // right below the crosshair
+            if (health) DrawHealth(new Vector2(40f, height - 64f), center);
 
             cursorY = 14f;
             if (!showPanel)
@@ -97,6 +104,7 @@ namespace HyperInfinite
             DrawControls();
             DrawMovement();
             DrawShotgun();
+            DrawHazard();
         }
 
         // ---- Sections -------------------------------------------------------------------
@@ -157,8 +165,83 @@ namespace HyperInfinite
                 Line($"Looking at {lookingAt}  ·  {lookingAtDistance:0.0} m  ·  one bolt does {shotgun.DamageAt(lookingAtDistance):0.0} there", small);
         }
 
+        void DrawHazard()
+        {
+            if (PulsatingEggs.All.Count == 0) return;
+            PulsatingEggs nearest = null;
+            float best = float.MaxValue;
+            Vector3 from = controls.transform.position;
+            foreach (PulsatingEggs eggs in PulsatingEggs.All)
+            {
+                float d = Vector3.Distance(from, eggs.transform.position);
+                if (d < best) { best = d; nearest = eggs; }
+            }
+            cursorY += 6f;
+            Line($"<b>Hazard</b>  nearest eggs {best:0.0} m  ·  {Describe(nearest)}");
+        }
+
+        static string Describe(PulsatingEggs eggs)
+        {
+            switch (eggs.State)
+            {
+                case EggState.Swelling: return "<color=#ff5a3c>SWELLING</color>";
+                case EggState.Spent: return "erupted";
+                default: return eggs.Disturbance > 0.01f ? $"<color=#ffb347>waking {eggs.Disturbance * 100f:0}%</color>" : "dormant";
+            }
+        }
+
+        /// <summary>A label and wake-up bar floating over each cluster of eggs in view, out to 45 m.</summary>
+        void DrawEggMarkers(float scale)
+        {
+            if (!view || !showPanel) return;
+            foreach (PulsatingEggs eggs in PulsatingEggs.All)
+            {
+                Vector3 screen = view.WorldToScreenPoint(eggs.transform.position + Vector3.up * 1.7f);
+                if (screen.z <= 0f || screen.z > 45f) continue;
+                var p = new Vector2(screen.x / scale, (Screen.height - screen.y) / scale);
+                content.text = Describe(eggs);
+                Vector2 size = small.CalcSize(content);
+                Fill(new Rect(p.x - size.x / 2f - 5f, p.y - 22f, size.x + 10f, 34f), PanelColor);
+                GUI.Label(new Rect(p.x - size.x / 2f, p.y - 22f, size.x + 4f, 22f), content, small);
+                if (eggs.State != EggState.Spent)
+                {
+                    var bar = new Rect(p.x - 30f, p.y + 2f, 60f, 5f);
+                    Fill(bar, ChipOff);
+                    Fill(new Rect(bar.x, bar.y, bar.width * eggs.Disturbance, bar.height), Color.Lerp(new Color(0.75f, 0.45f, 1f), new Color(1f, 0.3f, 0.2f), eggs.Disturbance));
+                }
+            }
+        }
+
+        void DrawHealth(Vector2 at, Vector2 center)
+        {
+            const float w = 320f, h = 16f;
+            var bar = new Rect(at.x, at.y, w, h);
+            Fill(new Rect(bar.x - 3f, bar.y - 27f, bar.width + 6f, bar.height + 30f), PanelColor);
+            Fill(bar, ChipOff);
+            float f = health.Fraction;
+            Fill(new Rect(bar.x, bar.y, bar.width * f, bar.height), Color.Lerp(new Color(0.9f, 0.2f, 0.18f), new Color(0.35f, 0.9f, 0.45f), f));
+            content.text = $"HEALTH  {health.Current:0} / {health.Max:0}";
+            GUI.Label(new Rect(bar.x, bar.y - 24f, 600f, 22f), content, small);
+
+            if (!health.IsDead) return;
+            string back = respawner ? $"Back in {respawner.RespawnIn:0.0} s" : "No respawner in the scene";
+            content.text = "<b>You went down.</b>  " + back;
+            Vector2 size = text.CalcSize(content);
+            var box = new Rect(center.x - size.x / 2f - 14f, center.y - 80f, size.x + 28f, size.y + 14f);
+            Fill(box, PanelColor);
+            GUI.Label(new Rect(box.x + 14f, box.y + 7f, size.x + 4f, size.y), content, text);
+        }
+
+        /// <summary>A red wash over the screen for a moment after each hit.</summary>
+        void DrawHurt(float width, float height)
+        {
+            float t = (Time.time - health.LastDamageTime) / 0.35f;
+            if (t < 0f || t >= 1f) return;
+            Fill(new Rect(0f, 0f, width, height), new Color(0.75f, 0.04f, 0.04f, 0.28f * (1f - t)));
+        }
+
         /// <summary>
-        /// The heat gauge right below the crosshair, where the GDD's HUD puts it: amber as heat builds, flashing
+        /// The heat gauge right below the crosshair, amber as heat builds, flashing
         /// once the next blast would overheat the gun, and red while it's locked.
         /// </summary>
         void DrawHeatGauge(Vector2 topCenter)

@@ -9,8 +9,7 @@ namespace HyperInfinite
 {
     /// <summary>
     /// CONTROLS. The one place gameplay reads input from. It uses Unity's Input System
-    /// with the HyperInfiniteControls actions asset (Assets/Settings), which holds every binding. The
-    /// keyboard and mouse ones follow the GDD's controls, and gamepad bindings come along as an extra.
+    /// with the HyperInfiniteControls actions asset (Assets/Settings), which holds every binding.
     /// To rebind, double-click that asset and edit it in the Input Actions editor; no code changes.
     /// Every other script asks this component what the player wants to do this frame (move, look,
     /// jump, fire...).
@@ -188,7 +187,7 @@ namespace HyperInfinite
         }
 
         /// <summary>
-        /// The GDD's melee: tap Q for a quick hit, or hold it to charge a heavy punch that lands when you let
+        /// The melee: tap Q for a quick hit, or hold it to charge a heavy punch that lands when you let
         /// go. Both are decided on release, so one press never gives both.
         /// </summary>
         void ReadMelee()
