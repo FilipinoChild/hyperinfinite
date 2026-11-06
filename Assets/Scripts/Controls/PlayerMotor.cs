@@ -70,6 +70,8 @@ namespace HyperInfinite
         public bool IsDashing => dashTimer > 0f;
         /// <summary>0 straight after a dash, 1 when the next one is ready.</summary>
         public float DashReadiness => dashCooldown <= 0f ? 1f : Mathf.Clamp01(1f - dashCooldownTimer / dashCooldown);
+        /// <summary>Seconds until the next dash is ready; 0 when it is.</summary>
+        public float DashCooldownLeft => Mathf.Max(0f, dashCooldownTimer);
         public int AirJumpsLeft => Mathf.Max(0, airJumps - airJumpsUsed);
         public float RunSpeed => runSpeed;
 

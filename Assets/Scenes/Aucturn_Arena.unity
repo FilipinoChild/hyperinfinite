@@ -811,6 +811,9 @@ MonoBehaviour:
   onDied:
     m_PersistentCalls:
       m_Calls: []
+  onRevived:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &411088762
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1999,6 +2002,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1369437221}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1018238800
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1018238802}
+  - component: {fileID: 1018238801}
+  m_Layer: 0
+  m_Name: TempRespawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1018238801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1018238800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c0ce391d82ac7f4ca0806de6b22608b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.TempRespawner
+  spawnPoint: {fileID: 0}
+  killHeight: -20
+--- !u!4 &1018238802
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1018238800}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -20}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1133584475
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2932,7 +2981,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1938945984}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fec7dfbbd1e86234a8b676cca8e9272b, type: 3}
   m_Name: 
@@ -4507,3 +4556,4 @@ SceneRoots:
   - {fileID: 1785828708}
   - {fileID: 2095674875}
   - {fileID: 705333050}
+  - {fileID: 1018238802}

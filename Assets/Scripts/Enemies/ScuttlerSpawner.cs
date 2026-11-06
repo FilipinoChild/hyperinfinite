@@ -37,6 +37,26 @@ namespace HyperInfinite
         float timer = 1f;    // short pause before the first pack
         bool cleared;
 
+        // Read-only, for the HUD's wave counter.
+        /// <summary>The wave in progress (the pack last sent), starting at 1; 0 before the first.</summary>
+        public int Wave => packsSpawned;
+        /// <summary>How many waves there are in all; 0 means they keep coming.</summary>
+        public int TotalWaves => packsToSpawn;
+        /// <summary>Scuttlers from the current wave still alive.</summary>
+        public int ScuttlersLeft
+        {
+            get
+            {
+                int count = 0;
+                foreach (GameObject scuttler in alive) if (scuttler) count++;
+                return count;
+            }
+        }
+        /// <summary>Seconds until the next wave arrives, once this one is dead; 0 otherwise.</summary>
+        public float NextWaveIn => cleared || ScuttlersLeft > 0 ? 0f : Mathf.Max(0f, timer);
+        /// <summary>Every wave has been sent and killed.</summary>
+        public bool AllCleared => cleared;
+
         void Update()
         {
             // A destroyed object counts as null in Unity, so this drops the dead ones from the list
