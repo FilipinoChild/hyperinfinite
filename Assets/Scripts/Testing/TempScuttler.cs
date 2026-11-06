@@ -9,7 +9,7 @@ namespace HyperInfinite
     /// and wither after a few seconds so the test level never fills up. One bolt kills one.
     ///
     /// The collider is a trigger, so they never block the player's movement; shots still hit them because
-    /// Raycasts counts triggers that can take damage. Once Branden's Scuttler is ready, put its prefab in
+    /// Raycasts counts triggers that can take damage. Once scuttler is ready, put its prefab in
     /// the eggs' Scuttler Prefab field and delete this.
     /// </summary>
     [DisallowMultipleComponent]
