@@ -168,6 +168,7 @@ namespace HyperInfinite
             root.AddComponent<PlayerMotor>();
             root.AddComponent<Health>();
             root.AddComponent<PlayerHud>();   // HP and the dash cooldown, bottom left
+            root.AddComponent<PauseMenu>();   // Esc: resume, main menu or quit
 
             // Casts the player's shadow without getting in the first-person view.
             var shadow = Primitive(PrimitiveType.Capsule, "Shadow Body", root.transform, new Vector3(0f, 0.9f, 0f),

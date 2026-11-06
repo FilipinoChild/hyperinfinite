@@ -352,6 +352,7 @@ GameObject:
   - component: {fileID: 8741394267861297255}
   - component: {fileID: 3354443229068047057}
   - component: {fileID: 5198392281052137951}
+  - component: {fileID: 6424291177758514348}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -477,6 +478,9 @@ MonoBehaviour:
   onDied:
     m_PersistentCalls:
       m_Calls: []
+  onRevived:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &5198392281052137951
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -491,6 +495,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.PlayerHud
   lowHealth: 0.3
   trailDelay: 0.45
+  respawnProtection: 2
+--- !u!114 &6424291177758514348
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2578396166189733540}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 659dad9893703c14aa680c0ec9f62ce1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.PauseMenu
+  titleScene: Title
 --- !u!1 &5188418172600790442
 GameObject:
   m_ObjectHideFlags: 0
