@@ -211,11 +211,14 @@ MonoBehaviour:
   burstRadius: 2.5
   burstDamage: 10
   burstPush: 7
+  scuttlerPrefab: {fileID: 8298160621999139928, guid: c84382d810572614bb173b4bf8d556b1, type: 3}
+  swarmSize: 10
   regrowTime: 0
-  calmGlow: {r: 0.35, g: 0.07, b: 0.5, a: 1}
+  calmGlow: {r: 0.353, g: 0.063, b: 0.188, a: 1}
+  calmPulse: {r: 0.3, g: 0.02, b: 0.04, a: 1}
   angryGlow: {r: 2.4, g: 0.3, b: 0.12, a: 1}
   huskColor: {r: 0.13, g: 0.09, b: 0.11, a: 1}
-  gooColor: {r: 0.55, g: 0.2, b: 0.7, a: 1}
+  gooColor: {r: 0.62, g: 0.22, b: 0.32, a: 1}
   onSwelling:
     m_PersistentCalls:
       m_Calls: []
@@ -265,7 +268,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2474543456868994006}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: 0735f8d1dae713641bedf03e55bea209, type: 2}
 --- !u!23 &2787117888523438648
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -355,7 +358,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4346632257019926513}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: 0735f8d1dae713641bedf03e55bea209, type: 2}
 --- !u!23 &7708115267415761348
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -445,7 +448,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5385714904691171614}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: 0735f8d1dae713641bedf03e55bea209, type: 2}
 --- !u!23 &870220992769894598
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -535,7 +538,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5506516596529571289}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: 0735f8d1dae713641bedf03e55bea209, type: 2}
 --- !u!23 &4442818755677517526
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -625,7 +628,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7010486154215707968}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: 0735f8d1dae713641bedf03e55bea209, type: 2}
 --- !u!23 &6431591206985474349
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -715,7 +718,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7089284707473984127}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: 0735f8d1dae713641bedf03e55bea209, type: 2}
 --- !u!23 &705027344066380938
 MeshRenderer:
   m_ObjectHideFlags: 0

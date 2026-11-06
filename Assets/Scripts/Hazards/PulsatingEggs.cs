@@ -7,6 +7,16 @@ namespace HyperInfinite
     public enum EggState { Dormant, Swelling, Spent }
 
     /// <summary>
+    /// For whatever Pulsating Eggs release. TinyScuttler implements it, and the
+    /// eggs tell each one whom to chase and throw it out in a leap. Anything without it just appears
+    /// beside the eggs.
+    /// </summary>
+    public interface IHatchling
+    {
+        void Hatch(Transform target, Vector3 launchVelocity);
+    }
+
+    /// <summary>
     /// HAZARD 1. Pulsating Arachturn Eggs, which "erupt into a swarm of
     /// Scuttlers if shot, touched, or walked past".
     ///
@@ -14,6 +24,11 @@ namespace HyperInfinite
     /// its pulse quickens and reddens to show it. Fully awake, it swells for a moment (the warning) and
     /// then erupts. Touch it or shoot it and it erupts at once, with no warning. The eruption splashes and
     /// shoves anyone right next to it. Move away before it's fully awake and it settles down again.
+    /// 
+    /// HAZARD UNIQUE MECHANIC (1): The eruption releases a swarm of tiny Scuttlers (TinyScuttler),
+    /// hatchlings far smaller than the regular Scuttler, drawn with the same pixel art. The eggs spawn
+    /// whatever prefab is in Scuttler Prefab. Set them off from range with a blast and the swarm has to
+    /// cross open ground to reach you. Walk past and it bursts out at your feet.
     /// </summary>
     [DisallowMultipleComponent]
     public class PulsatingEggs : MonoBehaviour, IDamageable
@@ -45,20 +60,29 @@ namespace HyperInfinite
         [Tooltip("Knock-back from the eruption, in meters per second.")]
         [SerializeField, Min(0f)] float burstPush = 7f;
 
+        [Header("Swarm (the unique mechanic)")]
+        [Tooltip("What erupts out: the Tiny Scuttler prefab (Prefabs/Hazards).")]
+        [SerializeField] GameObject scuttlerPrefab;
+        [Tooltip("How many tiny Scuttlers each eruption releases.")]
+        [SerializeField, Range(0, 30)] int swarmSize = 10;
+
         [Header("Regrowing")]
         [Tooltip("Seconds until erupted eggs grow back. 0 means never; the test level uses 12.")]
         [SerializeField, Min(0f)] float regrowTime = 0f;
 
         [Header("Look")]
-        [SerializeField, ColorUsage(false, true)] Color calmGlow = new Color(0.35f, 0.07f, 0.5f);
+        [Tooltip("The dormant glow: the original prototype's dark crimson egg glow, #5a1030.")]
+        [SerializeField, ColorUsage(false, true)] Color calmGlow = new Color(0.353f, 0.063f, 0.188f);
+        [Tooltip("The faint red a dormant egg's glow gains at the top of each swell.")]
+        [SerializeField, ColorUsage(false, true)] Color calmPulse = new Color(0.3f, 0.02f, 0.04f);
         [SerializeField, ColorUsage(false, true)] Color angryGlow = new Color(2.4f, 0.3f, 0.12f);
         [SerializeField] Color huskColor = new Color(0.13f, 0.09f, 0.11f);
-        [SerializeField] Color gooColor = new Color(0.55f, 0.2f, 0.7f, 1f);
+        [SerializeField] Color gooColor = new Color(0.62f, 0.22f, 0.32f, 1f);
 
         [Header("Events (hook sounds and effects up here)")]
         [Tooltip("They started swelling: the warning before they erupt.")]
         public UnityEvent onSwelling = new UnityEvent();
-        [Tooltip("They erupted.")]
+        [Tooltip("They erupted and released the swarm.")]
         public UnityEvent onErupt = new UnityEvent();
         public UnityEvent onRegrown = new UnityEvent();
 
@@ -99,6 +123,8 @@ namespace HyperInfinite
             }
             var first = eggRenderers.Length > 0 && eggRenderers[0] ? eggRenderers[0].sharedMaterial : null;
             if (first) eggColor = first.HasProperty("_BaseColor") ? first.GetColor("_BaseColor") : first.HasProperty("_Color") ? first.GetColor("_Color") : Color.white;
+            if (!scuttlerPrefab && swarmSize > 0)
+                Debug.LogWarning(name + ": these Pulsating Eggs have no Scuttler Prefab, so nothing will hatch out of them.", this);
         }
 
         void OnEnable() { All.Add(this); }
@@ -152,8 +178,8 @@ namespace HyperInfinite
         }
 
         /// <summary>
-        /// Erupts at once, splashing and shoving anyone right next to it. Shots and touches call this,
-        /// and level scripts can too.
+        /// Erupts at once, splashing and shoving anyone right next to it and releasing the swarm. Shots and
+        /// touches call this, and level scripts can too.
         /// </summary>
         public void Erupt()
         {
@@ -165,6 +191,7 @@ namespace HyperInfinite
             Vector3 center = transform.position + Vector3.up * 0.5f;
             StreakFx.Burst(center, gooColor, 26, 7f, 0.6f);
             Splash(center);
+            SpawnSwarm();
             onErupt.Invoke();
         }
 
@@ -243,6 +270,23 @@ namespace HyperInfinite
             if (pushable != null && burstPush > 0f) pushable.Push((away + Vector3.up * 0.45f) * (burstPush * closeness));
         }
 
+        /// <summary>Scuttlers pour out all around the cluster. Any that implement IHatchling leap out and give chase.</summary>
+        void SpawnSwarm()
+        {
+            if (!scuttlerPrefab) return;
+            Transform target = Player();
+            for (int i = 0; i < swarmSize; i++)
+            {
+                float angle = (i + Random.value * 0.6f) / Mathf.Max(1, swarmSize) * Mathf.PI * 2f;
+                var dir = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                Vector3 at = transform.position + dir * 0.5f + Vector3.up * 0.4f;
+                GameObject scuttler = Instantiate(scuttlerPrefab, at, Quaternion.LookRotation(dir));
+                var hatchling = scuttler.GetComponent<IHatchling>();
+                if (hatchling != null)
+                    hatchling.Hatch(target, dir * Random.Range(2.5f, 4.5f) + Vector3.up * Random.Range(3.5f, 5.5f));
+            }
+        }
+
         Transform Player()
         {
             if (player && player.gameObject.activeInHierarchy) return player;
@@ -263,8 +307,10 @@ namespace HyperInfinite
             collapse = Mathf.MoveTowards(collapse, husk ? 1f : 0f, dt * (husk ? 8f : 0.7f));   // slumps fast, grows back slowly
 
             float d = Disturbance;
-            float frequency = Mathf.Lerp(0.7f, 3.2f, d);
-            float amplitude = Mathf.Lerp(0.04f, 0.09f, d);
+            // At rest: the prototype's beat (2.4 radians a second) and size (7%). Waking speeds it up.
+            float frequency = Mathf.Lerp(0.38f, 3.2f, d);
+            float amplitude = Mathf.Lerp(0.07f, 0.09f, d);
+            float calm = State == EggState.Dormant ? (1f - d) * (1f - collapse) : 0f;   // the red throb fades as anger takes over
             float swell = 1f;
             Color glow = Color.Lerp(calmGlow, angryGlow, d * d);
             if (State == EggState.Swelling)
@@ -289,7 +335,7 @@ namespace HyperInfinite
                 eggs[i].localPosition = position;
 
                 if (!eggRenderers[i]) continue;
-                block.SetColor("_EmissionColor", glow * (0.8f + 0.2f * wave));
+                block.SetColor("_EmissionColor", glow * (0.85f + 0.15f * wave) + calmPulse * (calm * Mathf.Max(0f, wave)));
                 block.SetColor("_BaseColor", surface);
                 block.SetColor("_Color", surface);
                 eggRenderers[i].SetPropertyBlock(block);
