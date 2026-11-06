@@ -21,8 +21,8 @@ namespace HyperInfinite
         PlayerMotor motor;
         EnergyBlastShotgun shotgun;
         Health health;
-        TempRespawner respawner;
         Camera view;
+        ScuttlerSpawner waves;
         string lookingAt = "";
         float lookingAtDistance = -1f;
         bool showPanel = true;
@@ -65,11 +65,11 @@ namespace HyperInfinite
 
         void FindParts()
         {
+            if (!waves) waves = FindAnyObjectByType<ScuttlerSpawner>();
             if (!controls) controls = FindAnyObjectByType<PlayerControls>();
             if (!motor) motor = FindAnyObjectByType<PlayerMotor>();
             if (!shotgun) shotgun = FindAnyObjectByType<EnergyBlastShotgun>();
             if (!health && controls) health = controls.GetComponent<Health>();
-            if (!respawner) respawner = FindAnyObjectByType<TempRespawner>();
             if (!view && controls) view = controls.GetComponentInChildren<Camera>();
         }
 
@@ -81,15 +81,10 @@ namespace HyperInfinite
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
             float width = Screen.width / scale, height = 1080f;
 
-            var center = new Vector2(width * 0.5f, height * 0.5f);
             if (health) DrawHurt(width, height);
             DrawEggMarkers(scale);
-            DrawCrosshair(center, shotgun ? Mathf.Max(6f, AngleToPixels(shotgun.Spread)) : 6f);
-            if (shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f) DrawHitMarker(center);
-            if (shotgun) DrawHeatGauge(new Vector2(center.x, center.y + 96f));   // right below the crosshair
-            if (health) DrawHealth(new Vector2(40f, height - 64f), center);
 
-            cursorY = 14f;
+            cursorY = waves ? 150f : 14f;   // below PlayerHud's wave counter when there is one
             if (!showPanel)
             {
                 Line("F1: show test readouts", small);
@@ -212,90 +207,12 @@ namespace HyperInfinite
             }
         }
 
-        void DrawHealth(Vector2 at, Vector2 center)
-        {
-            const float w = 320f, h = 16f;
-            var bar = new Rect(at.x, at.y, w, h);
-            Fill(new Rect(bar.x - 3f, bar.y - 27f, bar.width + 6f, bar.height + 30f), PanelColor);
-            Fill(bar, ChipOff);
-            float f = health.Fraction;
-            Fill(new Rect(bar.x, bar.y, bar.width * f, bar.height), Color.Lerp(new Color(0.9f, 0.2f, 0.18f), new Color(0.35f, 0.9f, 0.45f), f));
-            content.text = $"HEALTH  {health.Current:0} / {health.Max:0}";
-            GUI.Label(new Rect(bar.x, bar.y - 24f, 600f, 22f), content, small);
-
-            if (!health.IsDead) return;
-            string back = respawner ? $"Back in {respawner.RespawnIn:0.0} s" : "No respawner in the scene";
-            content.text = "<b>You went down.</b>  " + back;
-            Vector2 size = text.CalcSize(content);
-            var box = new Rect(center.x - size.x / 2f - 14f, center.y - 80f, size.x + 28f, size.y + 14f);
-            Fill(box, PanelColor);
-            GUI.Label(new Rect(box.x + 14f, box.y + 7f, size.x + 4f, size.y), content, text);
-        }
-
         /// <summary>A red wash over the screen for a moment after each hit.</summary>
         void DrawHurt(float width, float height)
         {
             float t = (Time.time - health.LastDamageTime) / 0.35f;
             if (t < 0f || t >= 1f) return;
             Fill(new Rect(0f, 0f, width, height), new Color(0.75f, 0.04f, 0.04f, 0.28f * (1f - t)));
-        }
-
-        /// <summary>
-        /// The heat gauge right below the crosshair, amber as heat builds, flashing
-        /// once the next blast would overheat the gun, and red while it's locked.
-        /// </summary>
-        void DrawHeatGauge(Vector2 topCenter)
-        {
-            const float w = 220f, h = 10f;
-            var bar = new Rect(topCenter.x - w / 2f, topCenter.y, w, h);
-            Fill(new Rect(bar.x - 3f, bar.y - 3f, bar.width + 6f, bar.height + 6f), PanelColor);
-            Fill(bar, ChipOff);
-            float heat = shotgun.Heat01;
-            bool flashing = shotgun.AboutToOverheat && Mathf.Repeat(Time.unscaledTime * 6f, 1f) < 0.5f;
-            Color color = shotgun.IsOverheated ? new Color(1f, 0.28f, 0.2f)
-                         : flashing ? Color.white
-                         : Color.Lerp(new Color(0.95f, 0.85f, 0.4f), new Color(1f, 0.45f, 0.15f), heat);
-            Fill(new Rect(bar.x, bar.y, bar.width * heat, bar.height), color);
-            for (int i = 1; i < 5; i++) Fill(new Rect(bar.x + bar.width * 0.2f * i - 1f, bar.y, 2f, bar.height), PanelColor);
-            string label = shotgun.IsOverheated ? "OVERHEATED" : shotgun.IsVenting ? "VENTING"
-                         : shotgun.AboutToOverheat ? "HEAT  ·  VENT NOW" : "HEAT";
-            content.text = label;
-            chipText.normal.textColor = shotgun.IsOverheated || flashing ? new Color(1f, 0.4f, 0.3f) : new Color(0.85f, 0.88f, 0.92f);
-            GUI.Label(new Rect(bar.x - 40f, bar.yMax + 4f, bar.width + 80f, 22f), content, chipText);
-        }
-
-        /// <summary>Converts an angle off the center of the view into pixels on the 1080-tall canvas.</summary>
-        float AngleToPixels(float degrees)
-        {
-            if (!view) return 0f;
-            return Mathf.Tan(degrees * Mathf.Deg2Rad) / Mathf.Tan(view.fieldOfView * 0.5f * Mathf.Deg2Rad) * 540f;
-        }
-
-        /// <summary>An X of dots around the crosshair when bolts land on something that takes damage.</summary>
-        static void DrawHitMarker(Vector2 c)
-        {
-            Color ink = new Color(1f, 0.32f, 0.25f, 0.95f);
-            for (int i = 0; i < 4; i++)
-            {
-                float sx = i % 2 == 0 ? 1f : -1f, sy = i < 2 ? 1f : -1f;
-                for (float d = 9f; d <= 17f; d += 4f) Fill(new Rect(c.x + sx * d - 2f, c.y + sy * d - 2f, 4f, 4f), ink);
-            }
-        }
-
-        /// <summary>Four ticks; the gap shows the bolt cone, so it widens and tightens with the spread.</summary>
-        void DrawCrosshair(Vector2 c, float gap)
-        {
-            const float length = 9f, thick = 2f;
-            Color ink = new Color(1f, 1f, 1f, 0.9f), edge = new Color(0f, 0f, 0f, 0.6f);
-            for (int pass = 0; pass < 2; pass++)
-            {
-                float grow = pass == 0 ? 1f : 0f;
-                Color col = pass == 0 ? edge : ink;
-                Fill(new Rect(c.x - thick / 2f - grow, c.y - gap - length - grow, thick + 2f * grow, length + 2f * grow), col);
-                Fill(new Rect(c.x - thick / 2f - grow, c.y + gap - grow, thick + 2f * grow, length + 2f * grow), col);
-                Fill(new Rect(c.x - gap - length - grow, c.y - thick / 2f - grow, length + 2f * grow, thick + 2f * grow), col);
-                Fill(new Rect(c.x + gap - grow, c.y - thick / 2f - grow, length + 2f * grow, thick + 2f * grow), col);
-            }
         }
 
         // ---- Drawing helpers --------------------------------------------------------------
