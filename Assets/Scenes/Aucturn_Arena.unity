@@ -119,6 +119,63 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1001 &16807260
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 2.1182578
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.00000006681137
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 5.976836
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (6)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1 &82473270
 GameObject:
   m_ObjectHideFlags: 0
@@ -231,6 +288,63 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 82473270}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &96690189
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -10.8931465
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.0000004333508
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -4.34915
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (9)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1 &112860473
 GameObject:
   m_ObjectHideFlags: 0
@@ -697,6 +811,120 @@ MonoBehaviour:
   onDied:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1001 &411088762
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 13.613679
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.000000036823394
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 6.68304
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (2)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+--- !u!1001 &438864886
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 10.80096
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.0000005991492
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 13.6419
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (3)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1 &483655720
 GameObject:
   m_ObjectHideFlags: 0
@@ -809,6 +1037,63 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 483655720}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &526237305
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 10.692364
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.00000035433368
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -7.3349953
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (5)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1 &538646443
 GameObject:
   m_ObjectHideFlags: 0
@@ -1250,6 +1535,63 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 813190705}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &842177507
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -12.929345
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.00000015631417
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 6.665883
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (8)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1 &871841767
 GameObject:
   m_ObjectHideFlags: 0
@@ -1281,6 +1623,63 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1369437221}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &883699439
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -4.6766872
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.00000017538764
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -7.1119742
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (10)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1 &927568834
 GameObject:
   m_ObjectHideFlags: 0
@@ -1466,6 +1865,63 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 948171598}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &957793266
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 5.6256857
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.0000004941444
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -4.921342
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (4)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1 &970585272
 GameObject:
   m_ObjectHideFlags: 0
@@ -1840,6 +2296,63 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1409431403}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &1418654324
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -12.361358
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.00000017323237
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 13.302777
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (7)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1 &1462035284
 GameObject:
   m_ObjectHideFlags: 0
@@ -2066,6 +2579,177 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1535357401}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &1708800911
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 17.908752
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.00000037457653
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -15.826908
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+--- !u!1001 &1784441957
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 14.407729
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.0000006229874
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -12.021085
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (1)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+--- !u!1001 &1785828708
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -14.133444
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.00000022489064
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -16.145323
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (11)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1 &1854302322
 GameObject:
   m_ObjectHideFlags: 0
@@ -2411,6 +3095,63 @@ MonoBehaviour:
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: fd23a151d42133443a59d5227e6d6570, type: 2}
   m_BuildHeightMesh: 0
+--- !u!1001 &2095674875
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -17.124918
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.000000103201955
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -11.751066
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1340070130377653359, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1720011759411420028, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
+      propertyPath: m_Name
+      value: Pulsating Eggs (12)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cfbbff75f1ea95c41b3f95e4b5fbb224, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -2422,3 +3163,16 @@ SceneRoots:
   - {fileID: 1369437221}
   - {fileID: 927568836}
   - {fileID: 223185600}
+  - {fileID: 1708800911}
+  - {fileID: 1784441957}
+  - {fileID: 411088762}
+  - {fileID: 438864886}
+  - {fileID: 957793266}
+  - {fileID: 526237305}
+  - {fileID: 16807260}
+  - {fileID: 1418654324}
+  - {fileID: 842177507}
+  - {fileID: 96690189}
+  - {fileID: 883699439}
+  - {fileID: 1785828708}
+  - {fileID: 2095674875}
