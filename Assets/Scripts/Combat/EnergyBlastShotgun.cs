@@ -87,7 +87,7 @@ namespace HyperInfinite
         [Tooltip("Degrees the view kicks up per blast while aiming.")]
         [SerializeField, Range(0f, 15f)] float recoilAim = 2.9f;
 
-        [Header("Energy glow")]
+        [Header("Energy glow (GlowColor)")]
         [Tooltip("Renderers that glow with the gun's charge and heat: the emitters and the receiver light. Their material needs emission switched on.")]
         [SerializeField] Renderer[] glowParts = new Renderer[0];
         [Tooltip("Ready to fire and cool.")]
@@ -128,7 +128,7 @@ namespace HyperInfinite
         MaterialPropertyBlock glowBlock;
         Vector3 restPosition;
         Quaternion restRotation, leverRest;
-        float cycleTimer, kick, flash, heat, overheatTimer;
+        float cycleTimer, flash, heat, overheatTimer;
         int nextEmitter;
         bool venting;
 
@@ -150,6 +150,12 @@ namespace HyperInfinite
         /// <summary>0 at the hip, 1 fully aimed.</summary>
         public float AimBlend { get; private set; }
         public ShotReport LastShot { get; private set; }
+        /// <summary>1 the instant a blast goes off, easing back to 0, for the gun's kick on screen.</summary>
+        public float Kick { get; private set; }
+        /// <summary>0 to 1 and back while the lever swings through the end of its cycle.</summary>
+        public float LeverSwing { get; private set; }
+        /// <summary>The emitters' glow: cyan when charged and cool, amber as heat builds, a red flicker when overheated, dim while recharging.</summary>
+        public Color GlowColor { get; private set; }
 
         /// <summary>What one bolt does at this distance.</summary>
         public float DamageAt(float distance) => boltDamage * Falloff(distance);
@@ -162,15 +168,12 @@ namespace HyperInfinite
                 var view = GetComponentInParent<Camera>();
                 aimOrigin = view ? view.transform : transform;
             }
-            restPosition = transform.localPosition;
-            restRotation = transform.localRotation;
             if (lever) leverRest = lever.localRotation;
             if (muzzleFlash)
             {
                 muzzleFlash.intensity = 0f;
                 muzzleFlash.enabled = false;
             }
-            glowBlock = new MaterialPropertyBlock();
         }
 
         void Update()
@@ -230,7 +233,7 @@ namespace HyperInfinite
         void Fire()
         {
             cycleTimer = cycleTime;
-            kick = 1f;
+            Kick = 1f;
             flash = flashIntensity;
             heat = Mathf.Min(100f, heat + heatPerShot);
             bool overheatedNow = heat >= 100f;   // the blast that overheats still goes off
@@ -322,7 +325,6 @@ namespace HyperInfinite
         /// </summary>
         void Glow()
         {
-            if (glowParts.Length == 0) return;
             Color glow;
             if (IsOverheated) glow = overheatGlow * (0.7f + 0.3f * Mathf.Sin(Time.time * 40f));   // flickers while locked
             else
@@ -332,9 +334,7 @@ namespace HyperInfinite
                 float charge = cycleTimer > 0f && cycleTime > 0f ? 1f - cycleTimer / cycleTime : 1f;
                 glow *= Mathf.Lerp(0.25f, 1f, charge);
             }
-            glowBlock.SetColor("_EmissionColor", glow);
-            foreach (Renderer part in glowParts)
-                if (part) part.SetPropertyBlock(glowBlock);
+            GlowColor = glow;
         }
 
         float Falloff(float distance)
@@ -346,17 +346,10 @@ namespace HyperInfinite
         /// <summary>The gun comes up to aim, kicks back on each blast, then the lever swings down and back. The emitters glow with charge and heat.</summary>
         void Animate(float dt)
         {
-            kick = Mathf.Max(0f, kick - dt * 5f);
-            float k = kick * kick * (1f - 0.5f * AimBlend);   // aimed blasts kick less
+            Kick = Mathf.Max(0f, Kick - dt * 5f);
             const float leverThrow = 0.35f;   // the last part of the cycle
-            float leverSwing = cycleTimer > 0f && cycleTimer < leverThrow
+            LeverSwing = cycleTimer > 0f && cycleTimer < leverThrow
                 ? Mathf.Sin((leverThrow - cycleTimer) / leverThrow * Mathf.PI) : 0f;
-            float aim = Mathf.SmoothStep(0f, 1f, AimBlend);
-
-            Vector3 basePosition = Vector3.Lerp(restPosition, aimPosition, aim);
-            transform.localPosition = basePosition + new Vector3(0f, 0.01f * k - 0.012f * leverSwing, -0.07f * k);
-            transform.localRotation = restRotation * Quaternion.Euler(-10f * k + 6f * leverSwing, 0f, -8f * leverSwing * (1f - 0.6f * aim));
-            if (lever) lever.localRotation = leverRest * Quaternion.Euler(-55f * leverSwing, 0f, 0f);
             Glow();
 
             if (muzzleFlash)

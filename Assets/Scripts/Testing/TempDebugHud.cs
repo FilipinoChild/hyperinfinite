@@ -177,7 +177,7 @@ namespace HyperInfinite
                 if (d < best) { best = d; nearest = eggs; }
             }
             cursorY += 6f;
-            Line($"<b>Hazard</b>  nearest eggs {best:0.0} m  ·  {Describe(nearest)}  ·  Scuttlers out {TempScuttler.Active.Count}");
+            Line($"<b>Hazard</b>  nearest eggs {best:0.0} m  ·  {Describe(nearest)}  ·  tiny Scuttlers out {TinyScuttler.Active.Count}");
         }
 
         static string Describe(PulsatingEggs eggs)
