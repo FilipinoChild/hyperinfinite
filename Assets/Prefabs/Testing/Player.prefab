@@ -351,6 +351,7 @@ GameObject:
   - component: {fileID: 4538854259850581739}
   - component: {fileID: 8741394267861297255}
   - component: {fileID: 3354443229068047057}
+  - component: {fileID: 5198392281052137951}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -476,6 +477,20 @@ MonoBehaviour:
   onDied:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5198392281052137951
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2578396166189733540}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5356c5b5ce959074f86049a236980c10, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.PlayerHud
+  lowHealth: 0.3
+  trailDelay: 0.45
 --- !u!1 &5188418172600790442
 GameObject:
   m_ObjectHideFlags: 0

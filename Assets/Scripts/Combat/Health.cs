@@ -18,6 +18,8 @@ namespace HyperInfinite
         [Tooltip("Sent with the damage taken.")]
         public UnityEvent<float> onDamaged = new UnityEvent<float>();
         public UnityEvent onDied = new UnityEvent();
+        [Tooltip("Back on its feet after Revive.")]
+        public UnityEvent onRevived = new UnityEvent();
 
         float current;
         float immuneUntil = -1f;
@@ -51,11 +53,18 @@ namespace HyperInfinite
             current = Mathf.Min(maxHealth, current + amount);
         }
 
-        /// <summary>Back to full health, for respawning.</summary>
-        public void Revive()
+        /// <summary>
+        /// Back to full health, for respawning. Protection is seconds of immunity afterwards, so whatever was
+        /// attacking can't knock you straight back down.
+        /// </summary>
+        public void Revive(float protection = 0f)
         {
             current = maxHealth;
-            immuneUntil = -1f;
+            immuneUntil = Time.time + protection;
+            onRevived.Invoke();
         }
+
+        /// <summary>True while immune after a hit or a revive.</summary>
+        public bool IsProtected => Time.time < immuneUntil;
     }
 }
