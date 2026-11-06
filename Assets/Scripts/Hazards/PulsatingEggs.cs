@@ -71,10 +71,13 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float regrowTime = 0f;
 
         [Header("Look")]
-        [SerializeField, ColorUsage(false, true)] Color calmGlow = new Color(0.35f, 0.07f, 0.5f);
+        [Tooltip("The dormant glow: the original prototype's dark crimson egg glow, #5a1030.")]
+        [SerializeField, ColorUsage(false, true)] Color calmGlow = new Color(0.353f, 0.063f, 0.188f);
+        [Tooltip("The faint red a dormant egg's glow gains at the top of each swell.")]
+        [SerializeField, ColorUsage(false, true)] Color calmPulse = new Color(0.3f, 0.02f, 0.04f);
         [SerializeField, ColorUsage(false, true)] Color angryGlow = new Color(2.4f, 0.3f, 0.12f);
         [SerializeField] Color huskColor = new Color(0.13f, 0.09f, 0.11f);
-        [SerializeField] Color gooColor = new Color(0.55f, 0.2f, 0.7f, 1f);
+        [SerializeField] Color gooColor = new Color(0.62f, 0.22f, 0.32f, 1f);
 
         [Header("Events (hook sounds and effects up here)")]
         [Tooltip("They started swelling: the warning before they erupt.")]
@@ -304,8 +307,10 @@ namespace HyperInfinite
             collapse = Mathf.MoveTowards(collapse, husk ? 1f : 0f, dt * (husk ? 8f : 0.7f));   // slumps fast, grows back slowly
 
             float d = Disturbance;
-            float frequency = Mathf.Lerp(0.7f, 3.2f, d);
-            float amplitude = Mathf.Lerp(0.04f, 0.09f, d);
+            // At rest: the prototype's beat (2.4 radians a second) and size (7%). Waking speeds it up.
+            float frequency = Mathf.Lerp(0.38f, 3.2f, d);
+            float amplitude = Mathf.Lerp(0.07f, 0.09f, d);
+            float calm = State == EggState.Dormant ? (1f - d) * (1f - collapse) : 0f;   // the red throb fades as anger takes over
             float swell = 1f;
             Color glow = Color.Lerp(calmGlow, angryGlow, d * d);
             if (State == EggState.Swelling)
@@ -330,7 +335,7 @@ namespace HyperInfinite
                 eggs[i].localPosition = position;
 
                 if (!eggRenderers[i]) continue;
-                block.SetColor("_EmissionColor", glow * (0.8f + 0.2f * wave));
+                block.SetColor("_EmissionColor", glow * (0.85f + 0.15f * wave) + calmPulse * (calm * Mathf.Max(0f, wave)));
                 block.SetColor("_BaseColor", surface);
                 block.SetColor("_Color", surface);
                 eggRenderers[i].SetPropertyBlock(block);

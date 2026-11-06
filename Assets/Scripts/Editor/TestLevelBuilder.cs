@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -19,6 +20,7 @@ namespace HyperInfinite
         const string PrefabFolder = "Assets/Prefabs";              // in Testing/ and Hazards/ subfolders
         const string MaterialFolder = "Assets/Materials/Greybox";
         const string TextureFolder = "Assets/Textures/Greybox";
+        const string MeshFolder = "Assets/Meshes/Greybox";
         const string GunSpritePath = "Assets/Textures/Sprites/EnergyBlastShotgun.png";
         const string ScuttlerSpritePath = "Assets/Textures/Sprites/Scuttler.png";
 
@@ -51,6 +53,7 @@ namespace HyperInfinite
             Folder(MaterialFolder);
             Folder(PrefabFolder);
             Folder(TextureFolder);
+            Folder(MeshFolder);
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             var stockCamera = Object.FindAnyObjectByType<Camera>();
@@ -380,6 +383,68 @@ namespace HyperInfinite
 
         // ---- The hazard ------------------------------------------------------------------
 
+        /// <summary>
+        /// A low-poly sphere of 10 segments around and 8 from top to bottom, with
+        /// the same 0.5 radius as Unity's sphere so the egg sizes stay as they are. Its edges stay visible, like
+        /// the rest of the 2.5D world, while its normals stay smooth. Saved as an asset and
+        /// updated in place on every build, so prefabs keep pointing at it.
+        /// </summary>
+        static Mesh LowPolyEggMesh()
+        {
+            const int around = 10, down = 8;
+            const float radius = 0.5f;
+            var vertices = new List<Vector3>();
+            var normals = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            for (int y = 0; y <= down; y++)
+            {
+                float v = (float)y / down;
+                for (int x = 0; x <= around; x++)
+                {
+                    float u = (float)x / around;
+                    var direction = new Vector3(-Mathf.Cos(u * Mathf.PI * 2f) * Mathf.Sin(v * Mathf.PI), Mathf.Cos(v * Mathf.PI),
+                                                Mathf.Sin(u * Mathf.PI * 2f) * Mathf.Sin(v * Mathf.PI));
+                    vertices.Add(direction * radius);
+                    normals.Add(direction.normalized);
+                    uvs.Add(new Vector2(u, 1f - v));
+                }
+            }
+            var triangles = new List<int>();
+            void Face(int a, int b, int c)
+            {
+                // Wind each triangle so it faces outward, whichever way round it was listed.
+                Vector3 normal = Vector3.Cross(vertices[b] - vertices[a], vertices[c] - vertices[a]);
+                if (Vector3.Dot(normal, vertices[a] + vertices[b] + vertices[c]) < 0f) { int swap = b; b = c; c = swap; }
+                triangles.Add(a); triangles.Add(b); triangles.Add(c);
+            }
+            for (int y = 0; y < down; y++)
+                for (int x = 0; x < around; x++)
+                {
+                    int a = y * (around + 1) + x + 1, b = y * (around + 1) + x;
+                    int c = (y + 1) * (around + 1) + x, d = (y + 1) * (around + 1) + x + 1;
+                    if (y != 0) Face(a, b, d);            // the top row is a fan of single triangles
+                    if (y != down - 1) Face(b, c, d);     // and so is the bottom row
+                }
+
+            string path = MeshFolder + "/Low Poly Egg.asset";
+            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (!mesh)
+            {
+                mesh = new Mesh();
+                AssetDatabase.CreateAsset(mesh, path);
+            }
+            mesh.Clear();
+            mesh.name = "Low Poly Egg";
+            mesh.SetVertices(vertices);
+            mesh.SetNormals(normals);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
+            mesh.RecalculateTangents();
+            EditorUtility.SetDirty(mesh);
+            return mesh;
+        }
+
         static GameObject BuildEggsPrefab(Kit kit, GameObject scuttlerPrefab)
         {
             var root = new GameObject("Pulsating Eggs");
@@ -404,6 +469,10 @@ namespace HyperInfinite
                 egg.localRotation = Quaternion.AngleAxis(20f, Vector3.Cross(Vector3.up, outward));
                 eggs[i + 1] = egg;
             }
+
+            // low-poly egg shape 
+            Mesh eggMesh = LowPolyEggMesh();
+            foreach (Transform egg in eggs) egg.GetComponent<MeshFilter>().sharedMesh = eggMesh;
 
             var pulsatingEggs = root.AddComponent<PulsatingEggs>();
             WireArray(pulsatingEggs, "eggs", eggs);
@@ -505,8 +574,8 @@ namespace HyperInfinite
                 DummyTarget = Lit("Dummy Bullseye", Hex(0xd23a2e), 0.3f, Hex(0x3a0905));
                 RangeLine = Lit("Range Line", Hex(0xe8d9a0), 0.1f, Hex(0x3b351c));
                 FiringLine = Lit("Firing Line", Hex(0xe0473a), 0.1f, Hex(0x5a0e08));
-                EggShell = Lit("Egg Shell", Hex(0x8a5a9c), 0.75f, new Color(0.04f, 0.01f, 0.06f));   // the eggs drive the glow
-                EggGoo = Lit("Egg Goo", Hex(0x3a2244), 0.85f);
+                EggShell = Lit("Egg Shell", Hex(0xc9637a), 0.15f, Hex(0x5a1030));
+                EggGoo = Lit("Egg Goo", Hex(0x3a1a26), 0.85f);
             }
 
             public Material Lit(string name, Color color, float smoothness, Color? glow = null)
