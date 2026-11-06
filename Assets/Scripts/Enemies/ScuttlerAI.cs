@@ -67,13 +67,13 @@ namespace HyperInfinite
         void OnEnable()
         {
             pack.Add(this);                            // join the pack
-            health.onDamaged.AddListener(OnHurt);      // react when shot
+            health.onDied.AddListener(OnHurt);      // react when shot
         }
 
         void OnDisable()
         {
             pack.Remove(this);                         // leave the pack when killed
-            health.onDamaged.RemoveListener(OnHurt);
+            health.onDied.RemoveListener(OnHurt);
         }
 
         void Start()
@@ -161,7 +161,7 @@ namespace HyperInfinite
         }
 
         /// Called by Health whenever this Scuttler takes damage.
-        void OnHurt(float amount)
+        void OnHurt()
         {
             // Scatter every Scuttler near this one, including itself.
             // ToArray() makes a copy, so the pack list can't change while we loop.

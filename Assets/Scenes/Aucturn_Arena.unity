@@ -1209,11 +1209,11 @@ MonoBehaviour:
   - {fileID: 1294201972}
   - {fileID: 970585273}
   - {fileID: 871841768}
-  firstPackSize: 3
-  packGrowth: 1
+  firstPackSize: 4
+  packGrowth: 2
   maxPackSize: 8
   packsToSpawn: 5
-  timeBetweenPacks: 3
+  timeBetweenPacks: 2
   clusterRadius: 1.5
   onPackSpawned:
     m_PersistentCalls:
