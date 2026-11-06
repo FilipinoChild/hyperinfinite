@@ -7,7 +7,7 @@ namespace HyperInfinite
     public enum EggState { Dormant, Swelling, Spent }
 
     /// <summary>
-    /// For whatever Pulsating Eggs release. Implement it on the Scuttler (TempScuttler does) and the
+    /// For whatever Pulsating Eggs release. TinyScuttler implements it, and the
     /// eggs tell each one whom to chase and throw it out in a leap. Anything without it just appears
     /// beside the eggs.
     /// </summary>
@@ -25,9 +25,9 @@ namespace HyperInfinite
     /// then erupts. Touch it or shoot it and it erupts at once, with no warning. The eruption splashes and
     /// shoves anyone right next to it. Move away before it's fully awake and it settles down again.
     /// 
-    /// HAZARD UNIQUE MECHANIC (1): The eruption releases a swarm of Scuttlers. The eggs
-    /// spawn whatever prefab is in Scuttler Prefab, so scuttler drops straight in; the test
-    /// level uses TempScuttler until then. Set them off from range with a blast and the swarm has to
+    /// HAZARD UNIQUE MECHANIC (1): The eruption releases a swarm of tiny Scuttlers (TinyScuttler),
+    /// hatchlings far smaller than the regular Scuttler, drawn with the same pixel art. The eggs spawn
+    /// whatever prefab is in Scuttler Prefab. Set them off from range with a blast and the swarm has to
     /// cross open ground to reach you. Walk past and it bursts out at your feet.
     /// </summary>
     [DisallowMultipleComponent]
@@ -61,9 +61,10 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float burstPush = 7f;
 
         [Header("Swarm (the unique mechanic)")]
-        [Tooltip("What erupts out: Scuttler once it exists, Temp Scuttler until then.")]
+        [Tooltip("What erupts out: the Tiny Scuttler prefab (Prefabs/Hazards).")]
         [SerializeField] GameObject scuttlerPrefab;
-        [SerializeField, Range(0, 20)] int swarmSize = 6;
+        [Tooltip("How many tiny Scuttlers each eruption releases.")]
+        [SerializeField, Range(0, 30)] int swarmSize = 10;
 
         [Header("Regrowing")]
         [Tooltip("Seconds until erupted eggs grow back. 0 means never; the test level uses 12.")]

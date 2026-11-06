@@ -412,7 +412,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 669bc545063f0b5468ddf0678d16daf2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.PlayerControls
-  actions: {fileID: -944628639613478452, guid: 47380aab3eff204408134db1566f36c3, type: 3}
+  actions: {fileID: 0}
   mouseSensitivity: 0.12
   stickLookSpeed: 200
   aimLookScale: 0.7

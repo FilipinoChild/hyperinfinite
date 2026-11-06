@@ -20,6 +20,12 @@ namespace HyperInfinite
         const string MaterialFolder = "Assets/Materials/Greybox";
         const string TextureFolder = "Assets/Textures/Greybox";
         const string GunSpritePath = "Assets/Textures/Sprites/EnergyBlastShotgun.png";
+        const string ScuttlerSpritePath = "Assets/Textures/Sprites/Scuttler.png";
+
+        // The regular Scuttler's size, in meters, and the share of it a hatchling is.
+        static readonly Vector2 ScuttlerSize = new Vector2(2.8f, 1.62f);
+        const float TinyScuttlerScale = 0.3f;
+
         const string ControlsAssetPath = "Assets/Settings/HyperInfiniteControls.inputactions";
 
         // Layout, in meters. The player spawns facing north (+Z).
@@ -33,6 +39,8 @@ namespace HyperInfinite
             if (!controlsAsset) return;   // checked first, so nothing has been replaced yet
             var gunSprite = PixelArt(GunSpritePath);
             if (!gunSprite) return;
+            var scuttlerSprite = PixelArt(ScuttlerSpritePath);
+            if (!scuttlerSprite) return;
             if (File.Exists(ScenePath) && !EditorUtility.DisplayDialog("Rebuild Test Level?",
                     "This rebuilds Scenes/TestLevel.unity and the prefabs and materials it made in Prefabs and Materials/Greybox. " +
                     "Changes you made to them will be lost.", "Rebuild", "Cancel"))
@@ -52,7 +60,7 @@ namespace HyperInfinite
             var kit = new Kit();
             var playerPrefab = BuildPlayerPrefab(kit, controlsAsset, gunSprite);
             var dummyPrefab = BuildDummyPrefab(kit);
-            var scuttlerPrefab = BuildScuttlerPrefab(kit);
+            var scuttlerPrefab = BuildTinyScuttlerPrefab(kit, scuttlerSprite);
             var eggsPrefab = BuildEggsPrefab(kit, scuttlerPrefab);
 
             var level = new GameObject("Level").transform;
@@ -345,38 +353,29 @@ namespace HyperInfinite
             go.isStatic = true;
         }
 
-        /// <summary>Scuttler: a small, dark red hatchling with glowing eyes and six legs.</summary>
-        static GameObject BuildScuttlerPrefab(Kit kit)
+        /// <summary>
+        /// The eggs' swarm: a tiny Scuttler, 30% of the regular one's size, drawn 2.5D like the prototype with
+        /// its pixel art on a quad that faces the camera. It stands on the ground by its feet.
+        /// </summary>
+        static GameObject BuildTinyScuttlerPrefab(Kit kit, Texture2D scuttlerSprite)
         {
-            var root = new GameObject("Temp Scuttler");
+            Vector2 size = ScuttlerSize * TinyScuttlerScale;
+            var root = new GameObject("Tiny Scuttler");
             var trigger = root.AddComponent<SphereCollider>();   // a trigger: shots hit it, the player walks through it
             trigger.isTrigger = true;
-            trigger.radius = 0.32f;
-            trigger.center = new Vector3(0f, 0.22f, 0f);
+            trigger.radius = size.x * 0.4f;
+            trigger.center = new Vector3(0f, size.y * 0.5f, 0f);
 
-            var body = new GameObject("Body").transform;
+            var body = new GameObject("Body").transform;   // pivots at the feet, so it squashes onto the ground
             body.SetParent(root.transform, false);
-            Primitive(PrimitiveType.Sphere, "Abdomen", body, new Vector3(0f, 0.2f, -0.06f), new Vector3(0.42f, 0.3f, 0.56f), kit.ScuttlerShell, collider: false);
-            Primitive(PrimitiveType.Sphere, "Head", body, new Vector3(0f, 0.24f, 0.3f), new Vector3(0.28f, 0.24f, 0.26f), kit.ScuttlerShell, collider: false);
-            Primitive(PrimitiveType.Sphere, "Eye Left", body, new Vector3(-0.07f, 0.29f, 0.41f), new Vector3(0.06f, 0.06f, 0.06f), kit.ScuttlerEye, collider: false);
-            Primitive(PrimitiveType.Sphere, "Eye Right", body, new Vector3(0.07f, 0.29f, 0.41f), new Vector3(0.06f, 0.06f, 0.06f), kit.ScuttlerEye, collider: false);
-            Primitive(PrimitiveType.Cube, "Mandible Left", body, new Vector3(-0.05f, 0.16f, 0.44f), new Vector3(0.025f, 0.025f, 0.11f), kit.ScuttlerEye, collider: false);
-            Primitive(PrimitiveType.Cube, "Mandible Right", body, new Vector3(0.05f, 0.16f, 0.44f), new Vector3(0.025f, 0.025f, 0.11f), kit.ScuttlerEye, collider: false);
-            // Three legs a side, splayed forward, out and back, and angled down to the ground.
-            for (int i = 0; i < 3; i++)
-            {
-                for (int side = -1; side <= 1; side += 2)
-                {
-                    var leg = Primitive(PrimitiveType.Cube, (side < 0 ? "Leg Left " : "Leg Right ") + (i + 1), body,
-                                        new Vector3(side * 0.24f, 0.14f, 0.12f - 0.16f * i), new Vector3(0.26f, 0.025f, 0.03f),
-                                        kit.ScuttlerShell, collider: false);
-                    leg.transform.localRotation = Quaternion.Euler(0f, side * (i - 1) * 25f, side * -25f);
-                }
-            }
+            body.localScale = new Vector3(size.x, size.y, 1f);
+            var sprite = Primitive(PrimitiveType.Quad, "Sprite", body, new Vector3(0f, 0.5f, 0f), Vector3.one,
+                                   kit.SpriteMaterial("Scuttler Sprite", scuttlerSprite), collider: false);
+            sprite.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
 
-            var scuttler = root.AddComponent<TempScuttler>();
+            var scuttler = root.AddComponent<TinyScuttler>();
             Wire(scuttler, "body", body);
-            return SavePrefab(root, "Testing", "Temp Scuttler");
+            return SavePrefab(root, "Hazards", "Tiny Scuttler");
         }
 
         // ---- The hazard ------------------------------------------------------------------
@@ -486,7 +485,7 @@ namespace HyperInfinite
             public readonly Material Floor, Wall, Block, Spawn, ZoneMovement, ZoneRange, ZoneEggs;
             public readonly Material Movement, Ramp;
             public readonly Material Dummy, DummyTarget, RangeLine, FiringLine;
-            public readonly Material EggShell, EggGoo, ScuttlerShell, ScuttlerEye;
+            public readonly Material EggShell, EggGoo;
 
             public Kit()
             {
@@ -508,8 +507,6 @@ namespace HyperInfinite
                 FiringLine = Lit("Firing Line", Hex(0xe0473a), 0.1f, Hex(0x5a0e08));
                 EggShell = Lit("Egg Shell", Hex(0x8a5a9c), 0.75f, new Color(0.04f, 0.01f, 0.06f));   // the eggs drive the glow
                 EggGoo = Lit("Egg Goo", Hex(0x3a2244), 0.85f);
-                ScuttlerShell = Lit("Scuttler Shell", Hex(0x6e1f1a), 0.5f);
-                ScuttlerEye = Lit("Scuttler Eye", Hex(0x40100c), 0.6f, Hex(0xff6a2a));
             }
 
             public Material Lit(string name, Color color, float smoothness, Color? glow = null)
@@ -530,6 +527,37 @@ namespace HyperInfinite
                     mat.EnableKeyword("_EMISSION");
                     mat.SetColor("_EmissionColor", glow.Value);
                 }
+                EditorUtility.SetDirty(mat);
+                return mat;
+            }
+
+            /// <summary>
+            /// Pixel art standing in the 3D world: unlit, so it keeps its colors, and
+            /// cut out at the edges of its pixels rather than blended, so it sorts correctly with everything else.
+            /// </summary>
+            public Material SpriteMaterial(string name, Texture2D texture)
+            {
+                Shader urpUnlit = Shader.Find("Universal Render Pipeline/Unlit");
+                Shader shader = urpUnlit ? urpUnlit : Shader.Find("Unlit/Transparent Cutout");
+                string path = MaterialFolder + "/" + name + ".mat";
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (!mat)
+                {
+                    mat = new Material(shader);
+                    AssetDatabase.CreateAsset(mat, path);
+                }
+                else if (mat.shader != shader) mat.shader = shader;
+                mat.mainTexture = texture;
+                mat.color = Color.white;
+                mat.SetFloat("_Cutoff", 0.5f);
+                if (urpUnlit)
+                {
+                    mat.SetFloat("_AlphaClip", 1f);
+                    mat.EnableKeyword("_ALPHATEST_ON");
+                    mat.SetFloat("_Cull", (float)CullMode.Off);
+                    mat.SetOverrideTag("RenderType", "TransparentCutout");
+                }
+                mat.renderQueue = (int)RenderQueue.AlphaTest;
                 EditorUtility.SetDirty(mat);
                 return mat;
             }

@@ -51,7 +51,7 @@ namespace HyperInfinite
 
         void Respawn()
         {
-            TempScuttler.ClearAll();
+            TinyScuttler.ClearAll();
             if (health) health.Revive();
             Vector3 position = spawnPoint ? spawnPoint.position : Vector3.zero;
             float yaw = spawnPoint ? spawnPoint.eulerAngles.y : 0f;

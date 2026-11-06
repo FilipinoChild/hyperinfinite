@@ -211,8 +211,8 @@ MonoBehaviour:
   burstRadius: 2.5
   burstDamage: 10
   burstPush: 7
-  scuttlerPrefab: {fileID: 1568510479893286557, guid: ec33d75d8769c7e43b4a22e97a8ff9f4, type: 3}
-  swarmSize: 6
+  scuttlerPrefab: {fileID: 8298160621999139928, guid: c84382d810572614bb173b4bf8d556b1, type: 3}
+  swarmSize: 10
   regrowTime: 0
   calmGlow: {r: 0.35, g: 0.07, b: 0.5, a: 1}
   angryGlow: {r: 2.4, g: 0.3, b: 0.12, a: 1}
