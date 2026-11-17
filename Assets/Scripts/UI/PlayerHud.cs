@@ -11,11 +11,11 @@ namespace HyperInfinite
     /// away; it blinks when health is low, and the whole panel jolts when you're hit.
     ///
     /// In the middle sits the crosshair. Its gap shows the shotgun's spread, so it tightens as you aim,
-    /// and red marks flash at its corners when a blast lands. Beside it, four small pips fill up while the
-    /// dash recharges, flash when it's ready and then get out of the way, so you can tell without looking
-    /// down. Below it is the shotgun's heat gauge: amber as heat builds, flashing just before the next
-    /// blast would overheat the gun, and red while it's locked, with VENT NOW, VENTING or OVERHEATED
-    /// under it only when there's something to do.
+    /// and red marks flash at its corners when a blast lands. Below it is the shotgun's heat gauge: amber
+    /// as heat builds, flashing just before the next blast would overheat the gun, and red while it's
+    /// locked. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
+    /// fills up, flashes when the dash is ready and then gets out of the way, so you can tell without
+    /// looking down. VENT NOW, VENTING or OVERHEATED shows below both, only when there's something to do.
     ///
     /// Top left is the wave counter, for scenes with a ScuttlerSpawner: GET READY before the first wave,
     /// then the wave number with how many Scuttlers are left, a countdown between waves, and ALL CLEAR at
@@ -37,13 +37,11 @@ namespace HyperInfinite
         [Tooltip("Seconds a hit's trail lingers before it drains.")]
         [SerializeField, Min(0f)] float trailDelay = 0.45f;
 
-        const float HealthBarWidth = 396f, DashBarWidth = 180f, HeatBarWidth = 180f;
+        const float HealthBarWidth = 396f, DashBarWidth = 180f, HeatBarWidth = 180f, CrosshairDashWidth = 120f;
         const float TickLength = 9f, TickThickness = 3f;
-        const int DashPips = 4;
 
         static readonly Vector2 TopLeft = new Vector2(0f, 1f), TopRight = new Vector2(1f, 1f), Middle = new Vector2(0.5f, 0.5f);
         static readonly Color TrailColor = new Color(1f, 0.92f, 0.85f, 0.85f);
-        static readonly Color PipEmpty = new Color(0.16f, 0.14f, 0.18f, 0.7f);
 
         Health health;
         PlayerRespawn respawn;
@@ -63,16 +61,14 @@ namespace HyperInfinite
         float trail = 1f, jolt;
         int shownHealth = -1, shownMaxHealth = -1, shownDash = -2;
 
-        // The crosshair, with the dash pips and the heat gauge.
+        // The crosshair, with the heat gauge and the dash cooldown under it.
         GameObject crosshair, hitMarker, heatGauge, dashGauge;
         readonly RectTransform[] ticks = new RectTransform[4];
-        readonly Image[] pips = new Image[DashPips];
-        RectTransform dashGaugeRect;
-        Image heatFill;
+        Image heatFill, crosshairDashFill;
         Text heatLabel;
         float shownGap = -1f, dashReadyAt = -10f;
         bool dashWasReady = true;
-        int shownPips = -1, shownHeatLabel = -1;
+        int shownHeatLabel = -1;
 
         // Top left.
         ScuttlerSpawner waves;
@@ -174,7 +170,7 @@ namespace HyperInfinite
             wavePanel.SetActive(false);   // until a spawner turns up
         }
 
-        /// <summary>Four ticks with dark edges around the screen's center, the hit marks at its corners, and the dash pips beside it.</summary>
+        /// <summary>Four ticks with dark edges around the screen's center, the hit marks at its corners, and the dash cooldown bar below.</summary>
         void BuildCrosshair(Transform parent)
         {
             RectTransform root = UiKit.Area("Crosshair", parent, Middle, Middle, Vector2.zero, Vector2.zero);
@@ -197,14 +193,12 @@ namespace HyperInfinite
             }
             hitMarker.SetActive(false);
 
-            // The dash pips: a short column to the right of the crosshair, filling from the bottom.
-            dashGaugeRect = UiKit.Area("Dash Pips", root, Middle, Middle, Vector2.zero, Vector2.zero);
-            dashGauge = dashGaugeRect.gameObject;
-            for (int i = 0; i < DashPips; i++)
-            {
-                UiKit.Box("Edge", dashGaugeRect, Middle, Middle, new Vector2(0f, (i - 1.5f) * 12f), new Vector2(12f, 15f), new Color(0f, 0f, 0f, 0.6f));
-                pips[i] = UiKit.Box("Pip " + (i + 1), dashGaugeRect, Middle, Middle, new Vector2(0f, (i - 1.5f) * 12f), new Vector2(6f, 9f), PipEmpty);
-            }
+            // The dash cooldown: a small copy of the bottom-left dash bar, in the slot just under the heat gauge.
+            RectTransform dashTrack = UiKit.Track("Dash Cooldown", root, Middle, new Vector2(0.5f, 1f), new Vector2(0f, -111f),
+                                                  new Vector2(CrosshairDashWidth, 9f));
+            dashGauge = dashTrack.gameObject;
+            crosshairDashFill = UiKit.Fill("Dash", dashTrack, Palette.Steel);
+            UiKit.Border(dashTrack, Palette.Ink);
             dashGauge.SetActive(false);
         }
 
@@ -217,7 +211,8 @@ namespace HyperInfinite
             for (int i = 1; i < 5; i++)   // marks at every fifth, about one blast's worth of heat each
                 UiKit.Box("Mark", track, new Vector2(0.2f * i, 0.5f), Middle, Vector2.zero, new Vector2(3f, 12f), Palette.Ink);
             UiKit.Border(track, Palette.Ink);
-            heatLabel = UiKit.Label("Heat Warning", track, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0f, -6f), new Vector2(300f, 24f), "", 16,
+            // The warning sits below the dash cooldown's slot, so the two never overlap.
+            heatLabel = UiKit.Label("Heat Warning", track, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0f, -21f), new Vector2(300f, 24f), "", 16,
                                     TextAnchor.MiddleCenter, Palette.White);
             heatGauge.SetActive(shotgun);
         }
@@ -298,7 +293,7 @@ namespace HyperInfinite
             }
         }
 
-        /// <summary>Opens the crosshair to the shotgun's spread, flashes the hit marks after a blast lands, and fills the dash pips.</summary>
+        /// <summary>Opens the crosshair to the shotgun's spread, flashes the hit marks after a blast lands, and fills the dash cooldown bar.</summary>
         void UpdateCrosshair()
         {
             float gap = shotgun && view ? Mathf.Max(6f, SpreadInPixels(shotgun.Spread)) : 6f;
@@ -311,18 +306,18 @@ namespace HyperInfinite
                 ticks[1].anchoredPosition = new Vector2(0f, -reach);
                 ticks[2].anchoredPosition = new Vector2(-reach, 0f);
                 ticks[3].anchoredPosition = new Vector2(reach, 0f);
-                dashGaugeRect.anchoredPosition = new Vector2(reach + TickLength * 0.5f + 18f, 0f);   // just outside the right tick
             }
             bool hit = shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f;
             if (hitMarker.activeSelf != hit) hitMarker.SetActive(hit);
-            UpdateDashPips();
+            UpdateCrosshairDash();
         }
 
         /// <summary>
-        /// The dash cooldown by the crosshair: pips fill from the bottom while it recharges, all four flash
-        /// white the moment it's ready, glow cyan for a beat, then disappear until the next dash.
+        /// The dash cooldown under the crosshair. It looks and fills like the bottom-left dash bar: grey
+        /// while it recharges, cyan when ready. It flashes white the moment the dash is ready, stays for
+        /// a beat, then disappears until the next dash.
         /// </summary>
-        void UpdateDashPips()
+        void UpdateCrosshairDash()
         {
             if (!motor) return;
             float ready = motor.DashReadiness;
@@ -330,16 +325,11 @@ namespace HyperInfinite
             if (isReady && !dashWasReady) dashReadyAt = Time.time;
             dashWasReady = isReady;
             float since = Time.time - dashReadyAt;
-            // One number for everything that affects the look, so it's only redrawn when that changes.
-            int look = !isReady ? Mathf.FloorToInt(ready * DashPips) : since < 0.12f ? 10 : since < 0.6f ? 11 : 12;
-            if (look == shownPips) return;
-            shownPips = look;
-            bool show = look != 12;
+            bool show = !isReady || since < 0.6f;
             if (dashGauge.activeSelf != show) dashGauge.SetActive(show);
             if (!show) return;
-            int lit = isReady ? DashPips : look;
-            Color litColor = look == 10 ? Palette.White : look == 11 ? Palette.Cyan : Palette.Dim;
-            for (int i = 0; i < DashPips; i++) pips[i].color = i < lit ? litColor : PipEmpty;
+            UiKit.SetFill(crosshairDashFill, ready, CrosshairDashWidth);
+            crosshairDashFill.color = !isReady ? Palette.Steel : since < 0.12f ? Palette.White : Palette.Cyan;
         }
 
         /// <summary>How far from the center a cone of this many degrees reaches, on the 1080-pixel-tall canvas.</summary>
