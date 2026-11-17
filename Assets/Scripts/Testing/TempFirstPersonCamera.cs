@@ -11,7 +11,8 @@ namespace HyperInfinite
     ///  - it tilts itself up and down;
     ///  - it narrows the view while EnergyBlastShotgun.AimBlend rises and kicks up on its onRecoil event;
     ///  - it drops to the ground and tips over when the player goes down, and gets back up on respawn;
-    ///  - it jolts sideways when the player is hit.
+    ///  - it jolts sideways when the player is hit;
+    ///  - it bobs gently with each step while running, in time with the gun.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     [DefaultExecutionOrder(-50)]   // after PlayerControls reads input, before movement and shooting
@@ -32,6 +33,8 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float fieldOfViewSpeed = 12f;
         [Tooltip("Meters the view dips on a hard landing.")]
         [SerializeField, Range(0f, 0.3f)] float landingDip = 0.08f;
+        [Tooltip("Meters the view bobs with each step while running. 0 switches it off.")]
+        [SerializeField, Range(0f, 0.08f)] float viewBob = 0.025f;
         [Tooltip("Eye height while down, in meters above the feet.")]
         [SerializeField, Range(0.1f, 1f)] float downEyeHeight = 0.4f;
         [Tooltip("Degrees the view tips over while down.")]
@@ -43,6 +46,7 @@ namespace HyperInfinite
         Health health;
         float down;    // 0 standing, 1 flat on the ground
         float jolt;    // degrees of sideways tilt from the last hit, settling back to 0
+        float bobTime, bobAmount;
         float pitch;   // degrees; positive looks down, as Unity rotates about X
         float recoil;  // degrees of upward kick that settles back down
         float eyeHeight, dip;
@@ -100,9 +104,15 @@ namespace HyperInfinite
             bool dead = health && health.IsDead;
             down = Mathf.MoveTowards(down, dead ? 1f : 0f, dt * (dead ? 2.5f : 5f));
 
+            // Running bobs the view on the same beat as ShotgunSprite bobs the gun.
+            bool running = !dead && motor && motor.IsGrounded && motor.Speed > 0.5f;
+            bobAmount = Mathf.MoveTowards(bobAmount, running ? 1f : 0f, dt * 6f);
+            if (running) bobTime += dt * 11f;
+            float bob = Mathf.Abs(Mathf.Sin(bobTime * 0.5f)) * viewBob * bobAmount;
+
             dip = Mathf.Lerp(dip, 0f, 1f - Mathf.Exp(-10f * dt));
             Vector3 p = transform.localPosition;
-            p.y = Mathf.Lerp(eyeHeight, downEyeHeight, Mathf.SmoothStep(0f, 1f, down)) - dip;
+            p.y = Mathf.Lerp(eyeHeight, downEyeHeight, Mathf.SmoothStep(0f, 1f, down)) - dip - bob;
             transform.localPosition = p;
         }
 

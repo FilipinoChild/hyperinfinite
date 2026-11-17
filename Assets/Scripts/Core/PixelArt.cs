@@ -24,8 +24,6 @@ namespace HyperInfinite
         public static Sprite Arrow => Get("Arrow", 0, ArrowRows);
         /// <summary>A corner of the hurt and shield borders; flipped for the other three corners.</summary>
         public static Sprite Corner => Get("Corner", 0, CornerRows);
-        /// <summary>The "!" over an enemy that's about to attack.</summary>
-        public static Sprite Alert => Get("Alert", 0, AlertRows);
         /// <summary>The ">" that marks the selected menu button.</summary>
         public static Sprite Chevron => Get("Chevron", 0, ChevronRows);
 
@@ -80,19 +78,6 @@ namespace HyperInfinite
             "##.#............",
             "##..............",
             "#...............",
-        };
-
-        static readonly string[] AlertRows =
-        {
-            ".###.",
-            ".###.",
-            ".###.",
-            ".###.",
-            ".###.",
-            "..#..",
-            ".....",
-            ".###.",
-            ".###.",
         };
 
         static readonly string[] ChevronRows =

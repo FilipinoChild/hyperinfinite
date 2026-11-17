@@ -7,12 +7,22 @@ namespace HyperInfinite
     /// Scuttlers hunt in packs: each one flanks to its own spot on a ring around the player,
     /// then rushes in to bite. Shooting one scatters it and its neighbors, and then they regroup.
     /// If the player is up on a platform, a Scuttler pounces up to reach them.
+    ///
+    /// A bite is telegraphed: the Scuttler crouches and flashes red for a moment, then leaps.
+    /// The bite only lands if the player is still in reach when it does, so dashing away
+    /// during the warning dodges it.
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Health))]
     public class ScuttlerAI : MonoBehaviour, IPushable
     {
         // Every living Scuttler in the scene. "static" means one shared list for all of them.
         static readonly List<ScuttlerAI> pack = new List<ScuttlerAI>();
+        // The player, found once and shared, so a new Scuttler doesn't search the scene again.
+        static PlayerControls sharedPlayer;
+        // What the sprite flashes while a bite is coming
+        static readonly Color WarningTint = new Color(1f, 0.25f, 0.2f);
+        // How much further than the attack range the leap itself reaches, in meters
+        const float LungeReach = 0.6f;
 
         [Header("Chasing")]
         [Tooltip("Seconds between path updates. Lower follows the player more closely.")]
@@ -40,6 +50,8 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float attackDamage = 8f;
         [Tooltip("Seconds between bites.")]
         [SerializeField, Min(0.1f)] float attackCooldown = 1f;
+        [Tooltip("Seconds it crouches and flashes red before the bite lands. This is the player's warning; 0 bites at once.")]
+        [SerializeField, Min(0f)] float biteWindup = 0.3f;
 
         [Header("Look")]
         [Tooltip("The visible body (the sprite). It hops up in an arc when the Scuttler pounces. Optional.")]
@@ -56,12 +68,16 @@ namespace HyperInfinite
 
         Vector3 bodyRest;            // where the body sits when not pouncing
         float pounceTimer, pounceArc;
+        FaceCamera sprite;           // shows the body's sprite: it crouches, stretches and flashes
+        float windupTimer;
+        bool windingUp;              // true during the warning before a bite
 
         void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<Health>();
             if (body) bodyRest = body.localPosition;
+            sprite = body ? body.GetComponentInChildren<FaceCamera>() : GetComponentInChildren<FaceCamera>();
         }
 
         void OnEnable()
@@ -79,7 +95,8 @@ namespace HyperInfinite
         void Start()
         {
             // Find the player by looking for the one object that has PlayerControls
-            PlayerControls controls = FindFirstObjectByType<PlayerControls>();
+            if (!sharedPlayer) sharedPlayer = FindAnyObjectByType<PlayerControls>();
+            PlayerControls controls = sharedPlayer;
             if (controls == null)
             {
                 Debug.LogWarning("ScuttlerAI: no player found in the scene.", this);
@@ -110,12 +127,18 @@ namespace HyperInfinite
                 agent.SetDestination(PickDestination());
             }
 
-            // Bite when close enough along the ground and the player isn't too high up
+            // Start a bite when close enough along the ground and the player isn't too high up
             float flatDistance = FlatDistanceToPlayer();
             float heightAbove = player.position.y - transform.position.y;
-            bool inReach = flatDistance <= attackRange && heightAbove <= pounceHeight;
-            if (inReach && attackTimer <= 0f)
-                Bite(flatDistance, heightAbove);
+            if (windingUp)
+            {
+                // Crouched and flashing red: the bite is coming
+                windupTimer -= dt;
+                if (sprite) sprite.Tint = Mathf.Repeat(windupTimer * 14f, 1f) < 0.5f ? WarningTint : Color.white;
+                if (windupTimer <= 0f) Bite(flatDistance, heightAbove);
+            }
+            else if (flatDistance <= attackRange && heightAbove <= pounceHeight && attackTimer <= 0f)
+                StartBite(flatDistance, heightAbove);
         }
 
         /// Flanking: head for this Scuttler's spot on the ring. Once there (or already
@@ -175,6 +198,7 @@ namespace HyperInfinite
         {
             committed = false;           // it has to flank again afterward
             scatterTimer = scatterTime;
+            CancelBite();                // a bite it was winding up is off
 
             Vector3 away = transform.position - player.position;
             away.y = 0f;
@@ -200,15 +224,47 @@ namespace HyperInfinite
             agent.velocity = velocityChange;
         }
 
-        void Bite(float flatDistance, float heightAbove)
+        /// The warning before a bite: crouch down and flash red for a moment.
+        void StartBite(float flatDistance, float heightAbove)
         {
             attackTimer = attackCooldown;
+            if (biteWindup <= 0f)
+            {
+                Bite(flatDistance, heightAbove);   // no warning wanted
+                return;
+            }
+            windingUp = true;
+            windupTimer = biteWindup;
+            if (sprite) sprite.Squash = -0.3f;     // crouched, ready to spring
+        }
+
+        void CancelBite()
+        {
+            if (!windingUp) return;
+            windingUp = false;
+            if (sprite)
+            {
+                sprite.Squash = 0f;
+                sprite.Tint = Color.white;
+            }
+        }
+
+        void Bite(float flatDistance, float heightAbove)
+        {
+            windingUp = false;
+            if (sprite)
+            {
+                sprite.Tint = Color.white;
+                sprite.Squash = 0.2f;              // stretched out in the leap
+            }
 
             // Leap: higher when the player is up on something, a small hop otherwise
             pounceTimer = pounceTime;
             pounceArc = Mathf.Clamp(heightAbove + 0.5f, 0.4f, pounceHeight + 0.5f);
 
-            if (playerHealth == null) return;
+            // The bite only lands if the player is still within the leap's reach
+            bool inReach = flatDistance <= attackRange + LungeReach && heightAbove <= pounceHeight;
+            if (!inReach || playerHealth == null) return;
             playerHealth.TakeDamage(new DamageInfo
             {
                 Amount = attackDamage,
@@ -224,14 +280,15 @@ namespace HyperInfinite
         /// Moves the visible body up and back down in an arc while pouncing.
         void AnimatePounce(float dt)
         {
-            if (!body) return;
-            if (pounceTimer > 0f)
-            {
-                pounceTimer -= dt;
-                float t = 1f - Mathf.Clamp01(pounceTimer / pounceTime);   // 0 at the start, 1 at the end
-                body.localPosition = bodyRest + Vector3.up * (Mathf.Sin(t * Mathf.PI) * pounceArc);
-            }
-            else body.localPosition = bodyRest;
+            if (pounceTimer <= 0f) return;   // not pouncing: nothing to move
+            pounceTimer -= dt;
+            float t = 1f - Mathf.Clamp01(pounceTimer / pounceTime);   // 0 at the start, 1 at the end
+            if (body) body.localPosition = bodyRest + Vector3.up * (Mathf.Sin(t * Mathf.PI) * pounceArc);
+            if (pounceTimer > 0f) return;
+
+            // Landed: back where it sits, and back to its normal shape
+            if (body) body.localPosition = bodyRest;
+            if (sprite && !windingUp) sprite.Squash = 0f;
         }
 
         /// Distance to the player along the ground, ignoring height

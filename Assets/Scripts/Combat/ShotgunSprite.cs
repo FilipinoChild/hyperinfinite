@@ -5,6 +5,7 @@ namespace HyperInfinite
 {
     /// <summary>
     /// The Energy Blast shotgun gun drawn over the bottom right of the view, 2.5D. It bobs while you run,
+    /// trails behind as you turn, leans as you strafe, lifts and drops as you jump and land,
     /// kicks down on every blast, dips while the lever cycles, slides toward the middle as you aim,
     /// drops and tilts while venting or overheated, and falls out of sight when you go down. Its emitter cells glow with the gun's charge and heat
     /// (EnergyBlastShotgun.GlowColor), a pixel burst flashes at the muzzle on every blast, and the muzzle
@@ -40,6 +41,10 @@ namespace HyperInfinite
         [Header("Motion (pixels on a 720-pixel-tall screen)")]
         [SerializeField, Min(0f)] float bob = 10f;
         [SerializeField, Min(0f)] float kick = 40f;
+        [Tooltip("How far the gun trails behind when you turn, in pixels per degree turned in a frame.")]
+        [SerializeField, Min(0f)] float sway = 3f;
+        [Tooltip("Degrees the gun leans when strafing at full speed.")]
+        [SerializeField, Range(0f, 15f)] float strafeLean = 3.5f;
 
         // From the prototype: the gun rotates around a point 80% of the way across its bottom edge.
         static readonly Vector2 Pivot = new Vector2(0.8f, 0f);
@@ -48,6 +53,7 @@ namespace HyperInfinite
 
         EnergyBlastShotgun shotgun;
         PlayerMotor motor;
+        PlayerControls controls;
         Health health;
         Camera view;
         Canvas canvas;
@@ -56,12 +62,14 @@ namespace HyperInfinite
         Image flash;
         RectTransform flashRect;
         Texture2D bodyTexture, glowTexture;
-        float bobTime, bobAmount, down, dropped;
+        float bobTime, bobAmount, down, dropped, lean, lift;
+        Vector2 trailing;
 
         void Awake()
         {
             shotgun = GetComponent<EnergyBlastShotgun>();
             motor = GetComponentInParent<PlayerMotor>();
+            controls = GetComponentInParent<PlayerControls>();
             health = GetComponentInParent<Health>();
             view = GetComponentInParent<Camera>();
             if (!sprite)
@@ -186,16 +194,30 @@ namespace HyperInfinite
             float kickPixels = kick * shotgun.Kick * shotgun.Kick * px;
             float lever = shotgun.LeverSwing;
 
+            // The gun has weight: it trails behind a turn, leans into a strafe, and lags a jump or a fall.
+            float follow = 1f - Mathf.Exp(-10f * dt);
+            Vector2 look = controls ? controls.Look : Vector2.zero;
+            trailing = Vector2.Lerp(trailing, new Vector2(Mathf.Clamp(-look.x * sway, -28f, 28f), Mathf.Clamp(-look.y * sway, -18f, 18f)), follow);
+            float sideways = 0f, rising = 0f;
+            if (motor)
+            {
+                Vector3 velocity = motor.Velocity;
+                sideways = motor.RunSpeed > 0f ? Mathf.Clamp(Vector3.Dot(velocity, transform.right) / motor.RunSpeed, -1f, 1f) : 0f;
+                rising = motor.IsGrounded ? 0f : Mathf.Clamp(-velocity.y * 2.2f, -26f, 26f);
+            }
+            lean = Mathf.Lerp(lean, sideways * strafeLean, follow);
+            lift = Mathf.Lerp(lift, rising, follow);
+
             float gunHeight = height * h, gunWidth = gunHeight * sprite.width / sprite.height;
             gun.sizeDelta = new Vector2(gunWidth, gunHeight);
             var rest = new Vector2(-(rightMargin * w + (1f - Pivot.x) * gunWidth), bottom * h);
             var offset = new Vector2(
-                -aimShift * w * aim + Mathf.Cos(bobTime * 0.5f) * bob * px * bobAmount,
+                -aimShift * w * aim + (Mathf.Cos(bobTime * 0.5f) * bob * bobAmount + trailing.x) * px,
                 -(lever * 0.03f + down * 0.08f + dropped * dropped * 0.6f) * h
-                - Mathf.Abs(Mathf.Sin(bobTime * 0.5f)) * bob * px * bobAmount - kickPixels);
+                - (Mathf.Abs(Mathf.Sin(bobTime * 0.5f)) * bob * bobAmount - trailing.y - lift) * px - kickPixels);
             gun.anchoredPosition = rest + offset;
             // The prototype tips it back (counterclockwise) for each of these: a positive angle in UI space.
-            gun.localRotation = Quaternion.Euler(0f, 0f, kickPixels / px * 0.12f + lever * 10f + down * 14f);
+            gun.localRotation = Quaternion.Euler(0f, 0f, kickPixels / px * 0.12f + lever * 10f + down * 14f - lean);
 
             Color tint = shotgun.IsOverheated ? new Color(1f, 0.72f, 0.6f) : Color.Lerp(Color.white, new Color(1f, 0.93f, 0.86f), shotgun.Heat01);
             body.color = tint;

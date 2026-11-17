@@ -5,12 +5,19 @@ namespace HyperInfinite
 {
     /// The Hive Mother boss. She stalks the player, winds up and slams the ground when
     /// the player gets close, and summons Scuttlers every few seconds.
+    ///
+    /// The slam is telegraphed: the red ring shows where it will land and blinks faster and
+    /// faster, rings of sparks sweep out to its edge, and she rears up and flashes red. When it
+    /// lands she drops flat and a shockwave bursts across the ring.
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Health))]
     public class HiveMotherAI : MonoBehaviour
     {
         // The three things she can be doing. Only one at a time.
         enum State { Stalking, WindingUp, Recovering }
+
+        // What her sprite flashes while a slam is coming
+        static readonly Color WarningTint = new Color(1f, 0.3f, 0.2f);
 
         [Header("Ground slam")]
         [Tooltip("She starts a slam when the player is this close, in meters.")]
@@ -40,16 +47,19 @@ namespace HyperInfinite
         IDamageable playerHealth;
         State state = State.Stalking;
         float stateTimer, slamCooldownTimer, summonTimer, repathTimer;
+        FaceCamera sprite;           // shows her sprite: it rears up, flashes and drops flat
+        bool secondPulse;            // the second ring of sparks has gone out this wind-up
 
         void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
+            sprite = GetComponentInChildren<FaceCamera>();
             if (slamWarning) slamWarning.SetActive(false);
         }
 
         void Start()
         {
-            PlayerControls controls = FindFirstObjectByType<PlayerControls>();
+            PlayerControls controls = FindAnyObjectByType<PlayerControls>();
             if (controls == null)
             {
                 Debug.LogWarning("HiveMotherAI: no player found in the scene.", this);
@@ -91,11 +101,14 @@ namespace HyperInfinite
 
                 case State.WindingUp:
                     stateTimer -= dt;
+                    AnimateWarning();
                     if (stateTimer <= 0f) Slam();
                     break;
 
                 case State.Recovering:
                     stateTimer -= dt;
+                    // A quarter of a second flat on the ground, then she picks herself up
+                    if (sprite && stateTimer <= slamRecovery - 0.25f) sprite.Squash = 0f;
                     if (stateTimer <= 0f)
                     {
                         state = State.Stalking;
@@ -111,6 +124,28 @@ namespace HyperInfinite
             stateTimer = slamWindup;
             agent.isStopped = true;                   // plant her feet
             if (slamWarning) slamWarning.SetActive(true);
+            // A ring of sparks sweeps out to the edge of the slam, and another halfway through
+            secondPulse = false;
+            PixelFx.Ring(transform.position, slamRadius, Palette.Yellow, 36, Mathf.Max(0.1f, slamWindup * 0.45f), 0.24f);
+        }
+
+        /// The warning while she winds up: the ring blinks faster and faster, and she
+        /// rears up taller and flashes red until the slam lands.
+        void AnimateWarning()
+        {
+            float progress = slamWindup > 0f ? 1f - Mathf.Clamp01(stateTimer / slamWindup) : 1f;   // 0 at the start, 1 as it lands
+            bool lit = Mathf.Repeat(Time.time * (4f + 8f * progress), 1f) < 0.6f;
+            if (slamWarning && slamWarning.activeSelf != lit) slamWarning.SetActive(lit);
+            if (sprite)
+            {
+                sprite.Squash = 0.2f * progress;
+                sprite.Tint = lit ? WarningTint : Color.white;
+            }
+            if (!secondPulse && progress >= 0.5f)
+            {
+                secondPulse = true;
+                PixelFx.Ring(transform.position, slamRadius, Palette.Yellow, 36, Mathf.Max(0.1f, slamWindup * 0.45f), 0.24f);
+            }
         }
 
         void Slam()
@@ -119,6 +154,16 @@ namespace HyperInfinite
             state = State.Recovering;
             stateTimer = slamRecovery;
             slamCooldownTimer = slamCooldown;
+
+            // She drops flat, and the shockwave bursts out across the ring
+            if (sprite)
+            {
+                sprite.Tint = Color.white;
+                sprite.Squash = -0.3f;
+            }
+            PixelFx.Ring(transform.position, slamRadius, Palette.Red, 44, 0.25f, 0.34f);
+            PixelFx.Ring(transform.position, slamRadius * 0.55f, Palette.Yellow, 24, 0.2f, 0.24f);
+            PixelFx.Burst(transform.position + Vector3.up * 0.3f, Palette.Navy, Palette.White, 24, 7f, 0.5f, 0.2f);
 
             // The slam hits along the ground, so a player in the air dodges it
             bool inRing = FlatDistanceToPlayer() <= slamRadius;
