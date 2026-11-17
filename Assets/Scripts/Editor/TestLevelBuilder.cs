@@ -80,7 +80,7 @@ namespace HyperInfinite
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
             Selection.activeGameObject = player;
-            Debug.Log("Hyper Infinite: built " + ScenePath + ". Press Play, then click the Game view to capture the mouse.");
+            Debug.Log("Hyper Infinite: built " + ScenePath + ". Press Play, then click the Game view to start.");
         }
 
         // ---- The player ------------------------------------------------------------------
@@ -166,6 +166,7 @@ namespace HyperInfinite
             root.AddComponent<PlayerRespawn>();   // getting back up where you fell, and falls out of the level
             root.AddComponent<PlayerHud>();   // HP and the dash cooldown, bottom left
             root.AddComponent<PauseMenu>();   // Esc: resume, main menu or quit
+            root.AddComponent<StartScreen>(); // the controls, and click to start
 
             // Casts the player's shadow without getting in the first-person view.
             var shadow = Primitive(PrimitiveType.Capsule, "Shadow Body", root.transform, new Vector3(0f, 0.9f, 0f),

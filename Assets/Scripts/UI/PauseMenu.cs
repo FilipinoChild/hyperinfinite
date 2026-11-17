@@ -23,6 +23,7 @@ namespace HyperInfinite
         static readonly Color DimColor = new Color(0.05f, 0f, 0.02f, 0.7f);
 
         PlayerControls controls;
+        StartScreen startScreen;
         Canvas canvas;
         GameObject menu;
         Button resumeButton;
@@ -34,6 +35,7 @@ namespace HyperInfinite
         void Awake()
         {
             controls = GetComponent<PlayerControls>();
+            startScreen = GetComponent<StartScreen>();
             Build();
         }
 
@@ -45,6 +47,7 @@ namespace HyperInfinite
         void Update()
         {
             if (!controls || !controls.PausePressed) return;
+            if (startScreen && startScreen.IsShowing) return;   // the level hasn't started yet
             if (IsPaused) Resume();
             else Pause();
         }
