@@ -14,7 +14,7 @@ namespace HyperInfinite
     }
 
     /// <summary>
-    /// COMBAT MECHANIC 1. John Infinite's Energy Blast shotgun: a lever-action
+    /// COMBAT MECHANIC 1. The Energy Blast shotgun: a lever-action
     /// shotgun that fires heavy energy blasts instead of shells. Each blast sends a cone of energy bolts
     /// from the center of the screen. Every bolt does full damage up close and less further out, so the
     /// gun hits hardest up close. Between blasts the lever has to cycle.

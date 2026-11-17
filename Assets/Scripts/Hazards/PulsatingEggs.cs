@@ -17,8 +17,8 @@ namespace HyperInfinite
     }
 
     /// <summary>
-    /// HAZARD 1. Pulsating Arachturn Eggs, which "erupt into a swarm of
-    /// Scuttlers if shot, touched, or walked past".
+    /// HAZARD 1. Pulsating Arachturn Eggs, which erupt into a swarm of
+    /// Scuttlers if shot, touched or walked past.
     ///
     /// A dormant cluster pulses quietly. Walk past and it starts to wake, faster the closer you are, and
     /// its pulse quickens and reddens to show it. Fully awake, it swells for a moment (the warning) and

@@ -143,7 +143,7 @@ namespace HyperInfinite
                 var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                 if (texture) return texture;
             }
-            EditorUtility.DisplayDialog("Sprite needed", "The test level needs " + path + ", the pixel art from the 10 Pager. " +
+            EditorUtility.DisplayDialog("Sprite needed", "The test level needs " + path + ". " +
                                         "Add it with exactly that name and folder, then build again.\n\nThe build stopped before changing anything.", "OK");
             return null;
         }
@@ -730,7 +730,7 @@ namespace HyperInfinite
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>Saves into a subfolder of Prefabs, so it can never overwrite a teammate's prefab of the same name.</summary>
+        /// <summary>Saves into a subfolder of Prefabs, so it can never overwrite another prefab of the same name.</summary>
         static GameObject SavePrefab(GameObject template, string folder, string name)
         {
             Folder(PrefabFolder + "/" + folder);
