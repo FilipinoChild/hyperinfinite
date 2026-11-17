@@ -1,78 +1,85 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace HyperInfinite
 {
     /// <summary>
-    /// The player's HUD, in the bottom-left corner: an HP bar with the numbers, and the thruster dash's cooldown. 
-    /// The HP bar's color runs from green to red as health falls, a pale trail shows each hit for a moment
-    ///  before draining away, and it pulses when health is low. The dash bar fills as the cooldown 
-    /// runs down, then turns cyan and reads READY.
+    /// The player's HUD, drawn in the game's pixel style with the parts from UiKit.
+    ///
+    /// Bottom left: the HP bar with its numbers, and the thruster dash's cooldown. The HP bar is green,
+    /// then yellow, then red as health falls; a pale trail shows each hit for a moment before draining
+    /// away; it blinks when health is low, and the whole panel jolts when you're hit.
     ///
     /// In the middle sits the crosshair. Its gap shows the shotgun's spread, so it tightens as you aim,
-    /// and red marks flash at its corners when a blast lands. Right below it is the shotgun's heat gauge,
-    /// kept small so it stays out of the way: amber as heat builds, flashing just
-    /// before the next blast would overheat the gun, and red while it's locked. Words appear under it
-    /// only when there's something to do: VENT NOW, VENTING or OVERHEATED.
+    /// and red marks flash at its corners when a blast lands. Beside it, four small pips fill up while the
+    /// dash recharges, flash when it's ready and then get out of the way, so you can tell without looking
+    /// down. Below it is the shotgun's heat gauge: amber as heat builds, flashing just before the next
+    /// blast would overheat the gun, and red while it's locked, with VENT NOW, VENTING or OVERHEATED
+    /// under it only when there's something to do.
     ///
-    /// In the top-left corner is the wave counter, for scenes with a ScuttlerSpawner: GET READY before
-    /// the first wave, then the wave number with how many Scuttlers are left, a countdown between waves,
-    /// and WAVES CLEARED at the end. The number pops when a new wave arrives.
+    /// Top left is the wave counter, for scenes with a ScuttlerSpawner: GET READY before the first wave,
+    /// then the wave number with how many Scuttlers are left, a countdown between waves, and ALL CLEAR at
+    /// the end. The number pops when a new wave arrives.
     ///
-    /// When you die, the screen dims and a Respawn button comes up (click it or press Enter). 
-    /// It brings you back right where you fell, at full health, with a moment of
-    /// protection. It doesn't move you or reset anything else: the waves, the boss and the eggs carry on.
-    /// While you're down, the controls are off and the cursor is free to click.
+    /// Getting hurt and going down are drawn by two helpers this makes: HurtOverlay (the red border and
+    /// the arrows that point at whatever hit you) and DeathScreen (the Respawn button). PlayerRespawn
+    /// does the actual respawning.
     ///
     /// Put it on the Player, next to Health and PlayerMotor; Hyper Infinite > Build Test Level does. It
-    /// makes its own screen-space canvas, laid out for 1920 x 1080 and scaled to any screen, so every
-    /// scene with the Player in it gets the HUD.
+    /// makes its own canvas, so every scene with the Player in it gets the HUD. Text only changes when
+    /// the number it shows does, so the HUD allocates nothing from frame to frame.
     /// </summary>
     [DisallowMultipleComponent]
     public class PlayerHud : MonoBehaviour
     {
-        [Tooltip("Below this share of health the HP bar pulses.")]
+        [Tooltip("Below this share of health the HP bar blinks and the screen's border stays red.")]
         [SerializeField, Range(0f, 1f)] float lowHealth = 0.3f;
         [Tooltip("Seconds a hit's trail lingers before it drains.")]
         [SerializeField, Min(0f)] float trailDelay = 0.45f;
 
-        static readonly Color PanelColor = new Color(0.04f, 0.03f, 0.06f, 0.7f);
-        static readonly Color TrackColor = new Color(0.16f, 0.14f, 0.2f, 1f);
-        static readonly Color HealthyColor = new Color(0.36f, 0.9f, 0.46f);
-        static readonly Color HurtColor = new Color(1f, 0.72f, 0.2f);
-        static readonly Color DyingColor = new Color(0.93f, 0.17f, 0.16f);
+        const float HealthBarWidth = 396f, DashBarWidth = 180f, HeatBarWidth = 180f;
+        const float TickLength = 9f, TickThickness = 3f;
+        const int DashPips = 4;
+
+        static readonly Vector2 TopLeft = new Vector2(0f, 1f), TopRight = new Vector2(1f, 1f), Middle = new Vector2(0.5f, 0.5f);
         static readonly Color TrailColor = new Color(1f, 0.92f, 0.85f, 0.85f);
-        static readonly Color DashReadyColor = new Color(0.19f, 0.78f, 1f);
-        static readonly Color DashCoolingColor = new Color(0.36f, 0.42f, 0.55f);
+        static readonly Color PipEmpty = new Color(0.16f, 0.14f, 0.18f, 0.7f);
 
         Health health;
         PlayerRespawn respawn;
-        Text respawnHint;
         PlayerMotor motor;
-        PlayerControls controls;
         EnergyBlastShotgun shotgun;
         Camera view;
-        GameObject crosshair, hitMarker, heatGauge;
-        RectTransform heatFill;
-        Image heatFillImage;
-        Text heatLabel;
-        readonly RectTransform[] ticks = new RectTransform[4];
         Canvas canvas;
-        GameObject deathScreen;
-        Button respawnButton;
+        HurtOverlay hurt;
+        DeathScreen deathScreen;
         bool shownDead;
+
+        // Bottom left.
+        RectTransform meters;
+        Vector2 metersHome;
+        Image healthFill, healthTrail, dashFill;
+        Text healthValue, dashValue;
+        float trail = 1f, jolt;
+        int shownHealth = -1, shownMaxHealth = -1, shownDash = -2;
+
+        // The crosshair, with the dash pips and the heat gauge.
+        GameObject crosshair, hitMarker, heatGauge, dashGauge;
+        readonly RectTransform[] ticks = new RectTransform[4];
+        readonly Image[] pips = new Image[DashPips];
+        RectTransform dashGaugeRect;
+        Image heatFill;
+        Text heatLabel;
+        float shownGap = -1f, dashReadyAt = -10f;
+        bool dashWasReady = true;
+        int shownPips = -1, shownHeatLabel = -1;
+
+        // Top left.
         ScuttlerSpawner waves;
         GameObject wavePanel;
         Text waveTitle, waveDetail;
-        int lastWave = -1;
         float wavePop, waveSearch;
-        RectTransform healthFill, healthTrail, dashFill;
-        Image healthFillImage, dashFillImage;
-        Text healthValue, dashValue;
-        float trail = 1f;
-        Font font;
+        int lastWave = -1, shownTitle = int.MinValue, shownDetail = int.MinValue;
 
         void Awake()
         {
@@ -80,54 +87,26 @@ namespace HyperInfinite
             respawn = GetComponent<PlayerRespawn>();
             if (!respawn && health) respawn = gameObject.AddComponent<PlayerRespawn>();   // an older Player prefab without one
             motor = GetComponent<PlayerMotor>();
-            controls = GetComponent<PlayerControls>();
             shotgun = GetComponentInChildren<EnergyBlastShotgun>();
             view = GetComponentInChildren<Camera>();
-            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            BuildCanvas();
+            Build();
         }
 
         void Start()
         {
-            // The Respawn button needs an EventSystem to be clicked. The Input System's UI module finds
-            // its default actions (mouse and Enter) by itself.
-            if (!FindAnyObjectByType<EventSystem>())
-            {
-                var eventSystem = new GameObject("EventSystem");
-                eventSystem.AddComponent<EventSystem>();
-                eventSystem.AddComponent<InputSystemUIInputModule>();
-            }
-        }
-
-        /// <summary>Back on your feet where you fell, at full health. Nothing else resets.</summary>
-        public void Respawn()
-        {
-            if (respawn && respawn.Respawn()) HideDeathScreen();
-        }
-
-        void ShowDeathScreen()
-        {
-            shownDead = true;
-            deathScreen.SetActive(true);
-            if (EventSystem.current) EventSystem.current.SetSelectedGameObject(respawnButton.gameObject);   // for Enter
-        }
-
-        void HideDeathScreen()
-        {
-            shownDead = false;
-            deathScreen.SetActive(false);
-            if (EventSystem.current && EventSystem.current.currentSelectedGameObject == respawnButton.gameObject)
-                EventSystem.current.SetSelectedGameObject(null);
+            UiKit.EnsureEventSystem();   // the Respawn button needs one to be clicked
         }
 
         void OnEnable()
         {
             if (canvas) canvas.enabled = true;
+            if (health) health.onDamaged.AddListener(OnDamaged);
         }
 
         void OnDisable()
         {
             if (canvas) canvas.enabled = false;
+            if (health) health.onDamaged.RemoveListener(OnDamaged);
         }
 
         void OnDestroy()
@@ -135,55 +114,254 @@ namespace HyperInfinite
             if (canvas) Destroy(canvas.gameObject);
         }
 
-        void BuildCanvas()
+        /// <summary>Back on your feet where you fell, at full health. Nothing else resets. The Respawn button calls this.</summary>
+        public void Respawn()
         {
-            var canvasObject = new GameObject("Player HUD (screen)");
-            canvasObject.transform.SetParent(transform, false);
-            canvas = canvasObject.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 10;   // over the gun sprite
-            var scaler = canvasObject.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 1f;   // scale with the screen's height
-            canvasObject.AddComponent<GraphicRaycaster>();
-
-            // Bottom left: HP on top, the dash under it.
-            RectTransform panel = Box("Survival Meters", canvasObject.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
-                                      new Vector2(36f, 36f), new Vector2(420f, 112f), PanelColor);
-
-            Label("HP Label", panel, new Vector2(16f, -12f), new Vector2(120f, 28f), "HP", 24, TextAnchor.UpperLeft, FontStyle.Bold);
-            healthValue = Label("HP Value", panel, new Vector2(-16f, -12f), new Vector2(240f, 28f), "", 24, TextAnchor.UpperRight, FontStyle.Bold);
-            healthValue.rectTransform.anchorMin = healthValue.rectTransform.anchorMax = healthValue.rectTransform.pivot = new Vector2(1f, 1f);
-            RectTransform healthTrack = Box("HP Bar", panel, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -44f),
-                                            new Vector2(388f, 20f), TrackColor);
-            healthTrail = Fill("Hit Trail", healthTrack, TrailColor, out _);
-            healthFill = Fill("Health", healthTrack, HealthyColor, out healthFillImage);
-
-            Label("Dash Label", panel, new Vector2(16f, -72f), new Vector2(120f, 22f), "DASH", 18, TextAnchor.UpperLeft, FontStyle.Bold);
-            dashValue = Label("Dash Value", panel, new Vector2(-16f, -72f), new Vector2(200f, 22f), "", 18, TextAnchor.UpperRight, FontStyle.Bold);
-            dashValue.rectTransform.anchorMin = dashValue.rectTransform.anchorMax = dashValue.rectTransform.pivot = new Vector2(1f, 1f);
-            RectTransform dashTrack = Box("Dash Bar", panel, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(96f, -79f),
-                                          new Vector2(170f, 10f), TrackColor);
-            dashFill = Fill("Dash", dashTrack, DashReadyColor, out dashFillImage);
-
-            BuildWaveCounter(canvasObject.transform);
-            BuildCrosshair(canvasObject.transform);
-            BuildHeatGauge(canvasObject.transform);
-            BuildDeathScreen(canvasObject.transform);   // last, so it covers everything else
+            if (respawn) respawn.Respawn();   // the death screen comes down by itself once you're alive
         }
 
-        /// <summary>The wave counter in the top-left corner: the wave in big letters, and what's left under it.</summary>
+        void OnDamaged(float amount)
+        {
+            jolt = 0.16f;
+            if (hurt != null) hurt.Hit(amount);
+        }
+
+        // ---- Building it -----------------------------------------------------------------------
+
+        void Build()
+        {
+            canvas = UiKit.NewCanvas("Player HUD (screen)", transform, 10);   // over the gun sprite
+            Transform root = canvas.transform;
+            if (health && view) hurt = new HurtOverlay(root, health, respawn, view.transform, lowHealth);   // first, so it's under everything else
+            BuildMeters(root);
+            BuildWaveCounter(root);
+            BuildCrosshair(root);
+            BuildHeatGauge(root);
+            if (respawn) deathScreen = new DeathScreen(root, respawn, Respawn);   // last, so it covers everything else
+        }
+
+        /// <summary>Bottom left: HP on top, the dash under it.</summary>
+        void BuildMeters(Transform parent)
+        {
+            meters = UiKit.Panel("Survival Meters", parent, Vector2.zero, Vector2.zero, new Vector2(36f, 36f), new Vector2(432f, 114f));
+            metersHome = meters.anchoredPosition;
+
+            UiKit.Label("HP Label", meters, TopLeft, TopLeft, new Vector2(18f, -9f), new Vector2(120f, 30f), "HP", 24, TextAnchor.MiddleLeft, Palette.White);
+            healthValue = UiKit.Label("HP Value", meters, TopRight, TopRight, new Vector2(-18f, -9f), new Vector2(240f, 30f), "", 24,
+                                      TextAnchor.MiddleRight, Palette.White);
+            RectTransform healthTrack = UiKit.Track("HP Bar", meters, TopLeft, TopLeft, new Vector2(18f, -48f), new Vector2(HealthBarWidth, 18f));
+            healthTrail = UiKit.Fill("Hit Trail", healthTrack, TrailColor);
+            healthFill = UiKit.Fill("Health", healthTrack, Palette.Green);
+            UiKit.Border(healthTrack, Palette.Ink);
+
+            UiKit.Label("Dash Label", meters, TopLeft, TopLeft, new Vector2(18f, -75f), new Vector2(90f, 24f), "DASH", 16, TextAnchor.MiddleLeft, Palette.Dim);
+            dashValue = UiKit.Label("Dash Value", meters, TopRight, TopRight, new Vector2(-18f, -75f), new Vector2(120f, 24f), "", 16,
+                                    TextAnchor.MiddleRight, Palette.White);
+            RectTransform dashTrack = UiKit.Track("Dash Bar", meters, TopLeft, TopLeft, new Vector2(96f, -81f), new Vector2(DashBarWidth, 12f));
+            dashFill = UiKit.Fill("Dash", dashTrack, Palette.Cyan);
+            UiKit.Border(dashTrack, Palette.Ink);
+        }
+
+        /// <summary>Top left: the wave in big letters, and what's left under it.</summary>
         void BuildWaveCounter(Transform parent)
         {
-            RectTransform panel = Box("Wave Counter", parent, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -36f),
-                                      new Vector2(320f, 92f), PanelColor);
+            RectTransform panel = UiKit.Panel("Wave Counter", parent, TopLeft, TopLeft, new Vector2(36f, -36f), new Vector2(348f, 96f));
             wavePanel = panel.gameObject;
-            waveTitle = Label("Wave", panel, new Vector2(16f, -8f), new Vector2(288f, 48f), "", 40, TextAnchor.MiddleLeft, FontStyle.Bold);
-            waveTitle.rectTransform.pivot = new Vector2(0f, 0.5f);   // pops from its left edge
-            waveTitle.rectTransform.anchoredPosition = new Vector2(16f, -32f);
-            waveDetail = Label("Left", panel, new Vector2(16f, -58f), new Vector2(288f, 26f), "", 20, TextAnchor.UpperLeft, FontStyle.Normal);
+            waveTitle = UiKit.Label("Wave", panel, TopLeft, new Vector2(0f, 0.5f), new Vector2(18f, -33f), new Vector2(312f, 45f), "", 32,
+                                    TextAnchor.MiddleLeft, Palette.White);   // pops from its left edge
+            waveDetail = UiKit.Label("Left", panel, TopLeft, TopLeft, new Vector2(18f, -60f), new Vector2(312f, 24f), "", 16,
+                                     TextAnchor.MiddleLeft, Palette.Dim);
             wavePanel.SetActive(false);   // until a spawner turns up
+        }
+
+        /// <summary>Four ticks with dark edges around the screen's center, the hit marks at its corners, and the dash pips beside it.</summary>
+        void BuildCrosshair(Transform parent)
+        {
+            RectTransform root = UiKit.Area("Crosshair", parent, Middle, Middle, Vector2.zero, Vector2.zero);
+            crosshair = root.gameObject;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 size = i < 2 ? new Vector2(TickThickness, TickLength) : new Vector2(TickLength, TickThickness);
+                ticks[i] = UiKit.Area("Tick " + (i + 1), root, Middle, Middle, Vector2.zero, size);
+                UiKit.Box("Edge", ticks[i], Middle, Middle, Vector2.zero, size + Vector2.one * 6f, new Color(0f, 0f, 0f, 0.6f));
+                UiKit.Box("Ink", ticks[i], Middle, Middle, Vector2.zero, size, Palette.White);
+            }
+
+            RectTransform marks = UiKit.Area("Hit Marker", root, Middle, Middle, Vector2.zero, Vector2.zero);
+            hitMarker = marks.gameObject;
+            for (int i = 0; i < 4; i++)
+            {
+                float sx = i % 2 == 0 ? 1f : -1f, sy = i < 2 ? 1f : -1f;
+                for (float d = 9f; d <= 21f; d += 6f)
+                    UiKit.Box("Mark", marks, Middle, Middle, new Vector2(sx * d, sy * d), new Vector2(6f, 6f), Palette.Red);
+            }
+            hitMarker.SetActive(false);
+
+            // The dash pips: a short column to the right of the crosshair, filling from the bottom.
+            dashGaugeRect = UiKit.Area("Dash Pips", root, Middle, Middle, Vector2.zero, Vector2.zero);
+            dashGauge = dashGaugeRect.gameObject;
+            for (int i = 0; i < DashPips; i++)
+            {
+                UiKit.Box("Edge", dashGaugeRect, Middle, Middle, new Vector2(0f, (i - 1.5f) * 12f), new Vector2(12f, 15f), new Color(0f, 0f, 0f, 0.6f));
+                pips[i] = UiKit.Box("Pip " + (i + 1), dashGaugeRect, Middle, Middle, new Vector2(0f, (i - 1.5f) * 12f), new Vector2(6f, 9f), PipEmpty);
+            }
+            dashGauge.SetActive(false);
+        }
+
+        /// <summary>The heat gauge, just below the crosshair: a slim bar marked in fifths, and a warning under it when needed.</summary>
+        void BuildHeatGauge(Transform parent)
+        {
+            RectTransform track = UiKit.Track("Heat Gauge", parent, Middle, new Vector2(0.5f, 1f), new Vector2(0f, -93f), new Vector2(HeatBarWidth, 12f));
+            heatGauge = track.gameObject;
+            heatFill = UiKit.Fill("Heat", track, Palette.Amber);
+            for (int i = 1; i < 5; i++)   // marks at every fifth, about one blast's worth of heat each
+                UiKit.Box("Mark", track, new Vector2(0.2f * i, 0.5f), Middle, Vector2.zero, new Vector2(3f, 12f), Palette.Ink);
+            UiKit.Border(track, Palette.Ink);
+            heatLabel = UiKit.Label("Heat Warning", track, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0f, -6f), new Vector2(300f, 24f), "", 16,
+                                    TextAnchor.MiddleCenter, Palette.White);
+            heatGauge.SetActive(shotgun);
+        }
+
+        // ---- Keeping it up to date -------------------------------------------------------------
+
+        void LateUpdate()
+        {
+            float dt = Time.deltaTime;
+            bool dead = health && health.IsDead;
+            if (dead != shownDead)
+            {
+                shownDead = dead;
+                crosshair.SetActive(!dead);
+                heatGauge.SetActive(!dead && shotgun);
+                if (deathScreen != null)
+                {
+                    if (dead) deathScreen.Show();
+                    else deathScreen.Hide();
+                }
+            }
+            if (deathScreen != null) deathScreen.Tick();
+            if (hurt != null) hurt.Tick(dt);
+            if (!dead)
+            {
+                UpdateCrosshair();
+                UpdateHeatGauge();
+            }
+            UpdateWaveCounter(dt);
+            UpdateMeters(dt);
+        }
+
+        void UpdateMeters(float dt)
+        {
+            if (health)
+            {
+                float f = Mathf.Clamp01(health.Fraction);
+                UiKit.SetFill(healthFill, f, HealthBarWidth);
+                bool low = f > 0f && f <= lowHealth;
+                Color color = f > 0.6f ? Palette.Green : f > lowHealth ? Palette.Yellow : Palette.Red;
+                if (low && Mathf.Repeat(Time.unscaledTime * 4f, 1f) < 0.5f) color = Palette.White;   // blinking
+                healthFill.color = color;
+
+                // The trail holds where health was for a moment after a hit, then drains down to it.
+                if (f >= trail) trail = f;
+                else if (Time.time - health.LastDamageTime >= trailDelay) trail = Mathf.MoveTowards(trail, f, dt * 0.8f);
+                UiKit.SetFill(healthTrail, trail, HealthBarWidth);
+
+                int now = Mathf.CeilToInt(health.Current), max = Mathf.CeilToInt(health.Max);
+                if (now != shownHealth || max != shownMaxHealth)
+                {
+                    shownHealth = now;
+                    shownMaxHealth = max;
+                    healthValue.text = now + " / " + max;
+                }
+
+                // A hit jolts the panel sideways for a moment, a few pixels each way.
+                if (jolt > 0f)
+                {
+                    jolt -= Time.unscaledDeltaTime;
+                    float side = jolt <= 0f ? 0f : (int)(jolt * 25f) % 2 == 0 ? 2f * UiKit.Pixel : -2f * UiKit.Pixel;
+                    meters.anchoredPosition = metersHome + new Vector2(side, 0f);
+                }
+            }
+            if (motor)
+            {
+                float ready = motor.DashReadiness;
+                bool isReady = ready >= 1f;
+                UiKit.SetFill(dashFill, ready, DashBarWidth);
+                int tenths = isReady ? -1 : Mathf.CeilToInt(motor.DashCooldownLeft * 10f);
+                if (tenths != shownDash)
+                {
+                    shownDash = tenths;
+                    dashFill.color = isReady ? Palette.Cyan : Palette.Steel;
+                    dashValue.color = isReady ? Palette.Cyan : Palette.White;
+                    dashValue.text = isReady ? "READY" : (tenths / 10) + "." + (tenths % 10) + " S";
+                }
+            }
+        }
+
+        /// <summary>Opens the crosshair to the shotgun's spread, flashes the hit marks after a blast lands, and fills the dash pips.</summary>
+        void UpdateCrosshair()
+        {
+            float gap = shotgun && view ? Mathf.Max(6f, SpreadInPixels(shotgun.Spread)) : 6f;
+            gap = Mathf.Round(gap / UiKit.Pixel) * UiKit.Pixel;   // moves a pixel at a time
+            float reach = gap + TickLength * 0.5f;
+            if (!Mathf.Approximately(gap, shownGap))
+            {
+                shownGap = gap;
+                ticks[0].anchoredPosition = new Vector2(0f, reach);
+                ticks[1].anchoredPosition = new Vector2(0f, -reach);
+                ticks[2].anchoredPosition = new Vector2(-reach, 0f);
+                ticks[3].anchoredPosition = new Vector2(reach, 0f);
+                dashGaugeRect.anchoredPosition = new Vector2(reach + TickLength * 0.5f + 18f, 0f);   // just outside the right tick
+            }
+            bool hit = shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f;
+            if (hitMarker.activeSelf != hit) hitMarker.SetActive(hit);
+            UpdateDashPips();
+        }
+
+        /// <summary>
+        /// The dash cooldown by the crosshair: pips fill from the bottom while it recharges, all four flash
+        /// white the moment it's ready, glow cyan for a beat, then disappear until the next dash.
+        /// </summary>
+        void UpdateDashPips()
+        {
+            if (!motor) return;
+            float ready = motor.DashReadiness;
+            bool isReady = ready >= 1f;
+            if (isReady && !dashWasReady) dashReadyAt = Time.time;
+            dashWasReady = isReady;
+            float since = Time.time - dashReadyAt;
+            // One number for everything that affects the look, so it's only redrawn when that changes.
+            int look = !isReady ? Mathf.FloorToInt(ready * DashPips) : since < 0.12f ? 10 : since < 0.6f ? 11 : 12;
+            if (look == shownPips) return;
+            shownPips = look;
+            bool show = look != 12;
+            if (dashGauge.activeSelf != show) dashGauge.SetActive(show);
+            if (!show) return;
+            int lit = isReady ? DashPips : look;
+            Color litColor = look == 10 ? Palette.White : look == 11 ? Palette.Cyan : Palette.Dim;
+            for (int i = 0; i < DashPips; i++) pips[i].color = i < lit ? litColor : PipEmpty;
+        }
+
+        /// <summary>How far from the center a cone of this many degrees reaches, on the 1080-pixel-tall canvas.</summary>
+        float SpreadInPixels(float degrees)
+        {
+            return Mathf.Tan(degrees * Mathf.Deg2Rad) / Mathf.Tan(view.fieldOfView * 0.5f * Mathf.Deg2Rad) * 540f;
+        }
+
+        void UpdateHeatGauge()
+        {
+            if (!shotgun) return;
+            float heat = Mathf.Clamp01(shotgun.Heat01);
+            bool flashing = shotgun.AboutToOverheat && Mathf.Repeat(Time.unscaledTime * 6f, 1f) < 0.5f;
+            UiKit.SetFill(heatFill, heat, HeatBarWidth);
+            heatFill.color = shotgun.IsOverheated ? Palette.Red : flashing ? Palette.White : heat > 0.5f ? Palette.Amber : Palette.Yellow;
+            int label = shotgun.IsOverheated ? 3 : shotgun.IsVenting ? 2 : shotgun.AboutToOverheat ? 1 : 0;   // nothing while all is well
+            if (label != shownHeatLabel)
+            {
+                shownHeatLabel = label;
+                heatLabel.text = label == 3 ? "OVERHEATED" : label == 2 ? "VENTING" : label == 1 ? "VENT NOW" : "";
+            }
+            heatLabel.color = shotgun.IsOverheated || flashing ? Palette.Red : Palette.White;
         }
 
         void UpdateWaveCounter(float dt)
@@ -204,259 +382,31 @@ namespace HyperInfinite
                 if (wave > 0) wavePop = 1f;   // a new wave just arrived
                 lastWave = wave;
             }
-            wavePop = Mathf.MoveTowards(wavePop, 0f, dt * 2.5f);
-            waveTitle.rectTransform.localScale = Vector3.one * (1f + 0.3f * wavePop * wavePop);
-
-            if (waves.AllCleared)
+            if (wavePop > 0f)
             {
-                waveTitle.text = "WAVES CLEARED";
-                waveTitle.color = DashReadyColor;
-                waveDetail.text = total > 0 ? "All " + total + " waves down" : "";
-                return;
-            }
-            waveTitle.color = Color.Lerp(Color.white, HurtColor, wavePop);
-            if (wave == 0)
-            {
-                waveTitle.text = "GET READY";
-                waveDetail.text = "First wave in " + Mathf.CeilToInt(waves.NextWaveIn) + " s";
-            }
-            else
-            {
-                waveTitle.text = total > 0 ? "WAVE " + wave + " / " + total : "WAVE " + wave;
-                waveDetail.text = remaining > 0 ? remaining + (remaining == 1 ? " Scuttler left" : " Scuttlers left")
-                                : "Next wave in " + Mathf.CeilToInt(waves.NextWaveIn) + " s";
-            }
-        }
-
-        /// <summary>Four ticks with dark edges around the screen's center, and the hit marks at its corners.</summary>
-        void BuildCrosshair(Transform parent)
-        {
-            RectTransform root = Rect("Crosshair", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-            crosshair = root.gameObject;
-            const float length = 9f, thick = 2f;
-            for (int i = 0; i < 4; i++)
-            {
-                bool vertical = i < 2;
-                var size = vertical ? new Vector2(thick, length) : new Vector2(length, thick);
-                ticks[i] = Rect("Tick " + (i + 1), root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, size + Vector2.one * 2f);
-                Box("Edge", ticks[i], new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, size + Vector2.one * 2f, new Color(0f, 0f, 0f, 0.6f));
-                Box("Ink", ticks[i], new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, size, new Color(1f, 1f, 1f, 0.9f));
+                wavePop = Mathf.MoveTowards(wavePop, 0f, dt * 2.5f);
+                waveTitle.rectTransform.localScale = Vector3.one * (1f + 0.3f * wavePop * wavePop);
+                waveTitle.color = wavePop > 0.5f ? Palette.Yellow : Palette.White;
             }
 
-            RectTransform marks = Rect("Hit Marker", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-            hitMarker = marks.gameObject;
-            var ink = new Color(1f, 0.32f, 0.25f, 0.95f);
-            for (int i = 0; i < 4; i++)
+            // Each line of text gets a number that stands for what it says, so it's only rewritten when that changes.
+            bool cleared = waves.AllCleared;
+            int seconds = Mathf.CeilToInt(waves.NextWaveIn);
+            int title = cleared ? -1 : wave * 1000 + total;
+            int detail = cleared ? -1 - total : remaining > 0 ? remaining : -100000 - seconds;
+            if (title != shownTitle)
             {
-                float sx = i % 2 == 0 ? 1f : -1f, sy = i < 2 ? 1f : -1f;
-                for (float d = 9f; d <= 17f; d += 4f)
-                    Box("Mark", marks, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(sx * d, sy * d), new Vector2(4f, 4f), ink);
+                shownTitle = title;
+                waveTitle.text = cleared ? "ALL CLEAR" : wave == 0 ? "GET READY" : total > 0 ? "WAVE " + wave + " / " + total : "WAVE " + wave;
+                if (cleared) waveTitle.color = Palette.Cyan;
             }
-            hitMarker.SetActive(false);
-        }
-
-        /// <summary>The heat gauge, just below the crosshair: a slim bar marked in fifths, and a warning under it when needed.</summary>
-        void BuildHeatGauge(Transform parent)
-        {
-            RectTransform back = Box("Heat Gauge", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1f), new Vector2(0f, -93f),
-                                     new Vector2(180f, 11f), PanelColor);
-            heatGauge = back.gameObject;
-            RectTransform track = Box("Heat Bar", back, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero,
-                                      new Vector2(176f, 7f), TrackColor);
-            heatFill = Fill("Heat", track, HurtColor, out heatFillImage);
-            for (int i = 1; i < 5; i++)   // marks at every fifth, about one blast's worth of heat each
-                Box("Mark", track, new Vector2(0.2f * i, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(2f, 7f), PanelColor);
-            heatLabel = Label("Heat Warning", back, Vector2.zero, new Vector2(300f, 18f), "", 14, TextAnchor.UpperCenter, FontStyle.Bold);
-            heatLabel.rectTransform.anchorMin = heatLabel.rectTransform.anchorMax = heatLabel.rectTransform.pivot = new Vector2(0.5f, 0f);
-            heatLabel.rectTransform.anchoredPosition = new Vector2(0f, -21f);
-            heatGauge.SetActive(shotgun);
-        }
-
-        void UpdateHeatGauge()
-        {
-            if (!shotgun) return;
-            heatGauge.SetActive(!shownDead);
-            if (shownDead) return;
-            float heat = Mathf.Clamp01(shotgun.Heat01);
-            bool flashing = shotgun.AboutToOverheat && Mathf.Repeat(Time.unscaledTime * 6f, 1f) < 0.5f;
-            SetFill(heatFill, heat);
-            heatFillImage.color = shotgun.IsOverheated ? new Color(1f, 0.28f, 0.2f)
-                                : flashing ? Color.white
-                                : Color.Lerp(new Color(0.95f, 0.85f, 0.4f), new Color(1f, 0.45f, 0.15f), heat);
-            heatLabel.text = shotgun.IsOverheated ? "OVERHEATED" : shotgun.IsVenting ? "VENTING"
-                           : shotgun.AboutToOverheat ? "VENT NOW" : "";   // nothing while all is well
-            heatLabel.color = shotgun.IsOverheated || flashing ? new Color(1f, 0.4f, 0.3f) : new Color(0.85f, 0.88f, 0.92f);
-        }
-
-        /// <summary>Opens the crosshair to the shotgun's spread and flashes the hit marks after a blast lands.</summary>
-        void UpdateCrosshair()
-        {
-            crosshair.SetActive(!shownDead);
-            if (shownDead) return;
-            const float length = 9f;
-            float gap = shotgun && view ? Mathf.Max(6f, SpreadInPixels(shotgun.Spread)) : 6f;
-            float reach = gap + length * 0.5f;
-            ticks[0].anchoredPosition = new Vector2(0f, reach);
-            ticks[1].anchoredPosition = new Vector2(0f, -reach);
-            ticks[2].anchoredPosition = new Vector2(-reach, 0f);
-            ticks[3].anchoredPosition = new Vector2(reach, 0f);
-            hitMarker.SetActive(shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f);
-        }
-
-        /// <summary>How far from the center a cone of this many degrees reaches, on the 1080-pixel-tall canvas.</summary>
-        float SpreadInPixels(float degrees)
-        {
-            return Mathf.Tan(degrees * Mathf.Deg2Rad) / Mathf.Tan(view.fieldOfView * 0.5f * Mathf.Deg2Rad) * 540f;
-        }
-
-        /// <summary>A dimmed screen with the Respawn button, hidden until you die.</summary>
-        void BuildDeathScreen(Transform parent)
-        {
-            RectTransform dim = Box("Death Screen", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero,
-                                    new Color(0.05f, 0f, 0.02f, 0.62f));
-            dim.anchorMin = Vector2.zero;
-            dim.anchorMax = Vector2.one;
-            dim.sizeDelta = Vector2.zero;
-            dim.GetComponent<Image>().raycastTarget = true;   // so clicks beside the button don't reach anything else
-            deathScreen = dim.gameObject;
-
-            Text title = Label("Title", dim, Vector2.zero, new Vector2(900f, 80f), "YOU WENT DOWN", 64, TextAnchor.MiddleCenter, FontStyle.Bold);
-            Center(title.rectTransform, new Vector2(0f, 120f));
-            title.color = DyingColor;
-            Text note = Label("Note", dim, Vector2.zero, new Vector2(900f, 40f),
-                              "Respawn right where you fell, at full health. The fight carries on.", 26, TextAnchor.MiddleCenter, FontStyle.Normal);
-            Center(note.rectTransform, new Vector2(0f, 50f));
-
-            RectTransform buttonRect = Box("Respawn Button", dim, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -40f),
-                                           new Vector2(320f, 76f), Color.white);
-            var buttonImage = buttonRect.GetComponent<Image>();
-            buttonImage.raycastTarget = true;
-            respawnButton = buttonRect.gameObject.AddComponent<Button>();
-            respawnButton.targetGraphic = buttonImage;
-            ColorBlock colors = respawnButton.colors;
-            colors.normalColor = new Color(0.1f, 0.55f, 0.75f);
-            colors.highlightedColor = DashReadyColor;
-            colors.selectedColor = DashReadyColor;
-            colors.pressedColor = new Color(0.08f, 0.36f, 0.5f);
-            respawnButton.colors = colors;
-            respawnButton.onClick.AddListener(Respawn);
-            Text label = Label("Label", buttonRect, Vector2.zero, new Vector2(320f, 76f), "RESPAWN", 34, TextAnchor.MiddleCenter, FontStyle.Bold);
-            Center(label.rectTransform, Vector2.zero);
-
-            respawnHint = Label("Hint", dim, Vector2.zero, new Vector2(900f, 30f), "", 20, TextAnchor.MiddleCenter, FontStyle.Normal);
-            Center(respawnHint.rectTransform, new Vector2(0f, -112f));
-            respawnHint.color = new Color(1f, 1f, 1f, 0.7f);
-
-            deathScreen.SetActive(false);
-        }
-
-        static void Center(RectTransform rect, Vector2 offset)
-        {
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = offset;
-        }
-
-        void LateUpdate()
-        {
-            float dt = Time.deltaTime;
-            UpdateCrosshair();
-            UpdateHeatGauge();
-            UpdateWaveCounter(dt);
-            if (health)
+            if (detail != shownDetail)
             {
-                if (health.IsDead && !shownDead) ShowDeathScreen();
-                else if (!health.IsDead && shownDead) HideDeathScreen();   // revived by something else
-                if (shownDead && respawn)
-                {
-                    // The button wakes up a beat after you go down, so a click meant for the fight can't skip this screen.
-                    bool ready = respawn.CanRespawn;
-                    if (respawnButton.interactable != ready || respawnHint.text.Length == 0)
-                    {
-                        respawnButton.interactable = ready;
-                        respawnHint.text = ready ? "Click, or press Enter" : "Thrusters charging...";
-                    }
-                }
-
-                float f = Mathf.Clamp01(health.Fraction);
-                SetFill(healthFill, f);
-                Color color = f > 0.5f ? Color.Lerp(HurtColor, HealthyColor, (f - 0.5f) * 2f) : Color.Lerp(DyingColor, HurtColor, f * 2f);
-                if (f > 0f && f <= lowHealth) color = Color.Lerp(color, Color.white, 0.35f * (0.5f + 0.5f * Mathf.Sin(Time.time * 9f)));
-                healthFillImage.color = color;
-
-                // The trail holds where health was for a moment after a hit, then drains down to it.
-                if (f >= trail) trail = f;
-                else if (Time.time - health.LastDamageTime >= trailDelay) trail = Mathf.MoveTowards(trail, f, dt * 0.8f);
-                SetFill(healthTrail, trail);
-                healthValue.text = Mathf.CeilToInt(health.Current) + " / " + Mathf.CeilToInt(health.Max);
+                shownDetail = detail;
+                waveDetail.text = cleared ? (total > 0 ? "ALL " + total + " WAVES DOWN" : "")
+                                : remaining > 0 ? remaining + (remaining == 1 ? " SCUTTLER LEFT" : " SCUTTLERS LEFT")
+                                : (wave == 0 ? "FIRST WAVE IN " : "NEXT WAVE IN ") + seconds + " S";
             }
-            if (motor)
-            {
-                float ready = motor.DashReadiness;
-                bool isReady = ready >= 1f;
-                SetFill(dashFill, ready);
-                dashFillImage.color = isReady ? DashReadyColor : DashCoolingColor;
-                dashValue.text = isReady ? "READY" : motor.DashCooldownLeft.ToString("0.0") + " s";
-                dashValue.color = isReady ? DashReadyColor : Color.white;
-            }
-        }
-
-        static void SetFill(RectTransform fill, float fraction)
-        {
-            fill.anchorMax = new Vector2(Mathf.Clamp01(fraction), 1f);
-        }
-
-        // ---- Building blocks -------------------------------------------------------------------
-
-        static RectTransform Rect(string name, Transform parent, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
-        {
-            var rect = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
-            rect.SetParent(parent, false);
-            rect.anchorMin = rect.anchorMax = anchor;
-            rect.pivot = pivot;
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-            return rect;
-        }
-
-        static RectTransform Box(string name, Transform parent, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size, Color color)
-        {
-            RectTransform rect = Rect(name, parent, anchor, pivot, position, size);
-            var image = rect.gameObject.AddComponent<Image>();
-            image.color = color;
-            image.raycastTarget = false;
-            return rect;
-        }
-
-        /// <summary>A bar's fill: it stretches across its track from the left, as far as SetFill says.</summary>
-        static RectTransform Fill(string name, RectTransform track, Color color, out Image image)
-        {
-            var rect = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
-            rect.SetParent(track, false);
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = rect.offsetMax = Vector2.zero;
-            image = rect.gameObject.AddComponent<Image>();
-            image.color = color;
-            image.raycastTarget = false;
-            return rect;
-        }
-
-        Text Label(string name, Transform parent, Vector2 position, Vector2 size, string value, int fontSize, TextAnchor alignment, FontStyle style)
-        {
-            RectTransform rect = Rect(name, parent, new Vector2(0f, 1f), new Vector2(0f, 1f), position, size);
-            var label = rect.gameObject.AddComponent<Text>();
-            label.font = font;
-            label.fontSize = fontSize;
-            label.fontStyle = style;
-            label.alignment = alignment;
-            label.color = Color.white;
-            label.text = value;
-            label.raycastTarget = false;
-            label.horizontalOverflow = HorizontalWrapMode.Overflow;
-            var shadow = rect.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.8f);
-            shadow.effectDistance = new Vector2(2f, -2f);
-            return label;
         }
     }
 }

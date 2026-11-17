@@ -10,7 +10,8 @@ namespace HyperInfinite
     ///  - it turns the Player root left and right (PlayerMotor moves the way the root faces);
     ///  - it tilts itself up and down;
     ///  - it narrows the view while EnergyBlastShotgun.AimBlend rises and kicks up on its onRecoil event;
-    ///  - it drops to the ground and tips over when the player goes down, and gets back up on respawn.
+    ///  - it drops to the ground and tips over when the player goes down, and gets back up on respawn;
+    ///  - it jolts sideways when the player is hit.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     [DefaultExecutionOrder(-50)]   // after PlayerControls reads input, before movement and shooting
@@ -41,6 +42,7 @@ namespace HyperInfinite
         EnergyBlastShotgun shotgun;
         Health health;
         float down;    // 0 standing, 1 flat on the ground
+        float jolt;    // degrees of sideways tilt from the last hit, settling back to 0
         float pitch;   // degrees; positive looks down, as Unity rotates about X
         float recoil;  // degrees of upward kick that settles back down
         float eyeHeight, dip;
@@ -65,12 +67,14 @@ namespace HyperInfinite
         {
             if (motor) motor.onLand.AddListener(OnLand);
             if (shotgun) shotgun.onRecoil.AddListener(OnRecoil);
+            if (health) health.onDamaged.AddListener(OnDamaged);
         }
 
         void OnDisable()
         {
             if (motor) motor.onLand.RemoveListener(OnLand);
             if (shotgun) shotgun.onRecoil.RemoveListener(OnRecoil);
+            if (health) health.onDamaged.RemoveListener(OnDamaged);
         }
 
         void Update()
@@ -79,8 +83,10 @@ namespace HyperInfinite
             Vector2 look = controls.Look;
             if (body) body.Rotate(0f, look.x, 0f, Space.World);
             pitch = Mathf.Clamp(pitch - look.y, -pitchLimit, pitchLimit);
-            recoil *= Mathf.Pow(0.0008f, Time.deltaTime);   // the web prototype's settle: about half gone in 0.1 s
-            transform.localRotation = Quaternion.Euler(pitch - recoil, 0f, downTilt * Mathf.SmoothStep(0f, 1f, down));
+            float settle = Mathf.Pow(0.0008f, Time.deltaTime);   // the web prototype's settle: about half gone in 0.1 s
+            recoil *= settle;
+            jolt *= settle;
+            transform.localRotation = Quaternion.Euler(pitch - recoil, 0f, downTilt * Mathf.SmoothStep(0f, 1f, down) + jolt);
         }
 
         void LateUpdate()
@@ -103,6 +109,12 @@ namespace HyperInfinite
         void OnRecoil(float degrees)
         {
             recoil += degrees;
+        }
+
+        /// <summary>A hit knocks the view to one side or the other, harder for a bigger hit.</summary>
+        void OnDamaged(float amount)
+        {
+            jolt = (Random.value < 0.5f ? -1f : 1f) * Mathf.Clamp(amount * 0.35f, 1.5f, 6f);
         }
 
         void OnLand(float impactSpeed)

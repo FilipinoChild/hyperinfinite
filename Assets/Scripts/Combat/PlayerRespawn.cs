@@ -53,6 +53,8 @@ namespace HyperInfinite
 
         /// <summary>True from going down until respawning.</summary>
         public bool IsDown => health.IsDead;
+        /// <summary>Seconds since going down; 0 when you're not.</summary>
+        public float DownFor => IsDown ? Time.unscaledTime - downAt : 0f;
         /// <summary>Seconds until Respawn will work; 0 when it does, or when you're not down.</summary>
         public float ReadyIn => IsDown ? Mathf.Max(0f, downAt + respawnDelay - Time.unscaledTime) : 0f;
         public bool CanRespawn => IsDown && ReadyIn <= 0f;

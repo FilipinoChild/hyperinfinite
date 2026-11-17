@@ -5,7 +5,8 @@ namespace HyperInfinite
 {
     /// <summary>
     /// TEMPORARY on-screen readouts for testing combat and controls.
-    /// Drawn with IMGUI (OnGUI), so it needs no Canvas or UI package. F1 shows or hides the panel.
+    /// Drawn with IMGUI (OnGUI), so it needs no Canvas or UI package. F1 shows or hides the panel; it
+    /// starts hidden and does no work until it's shown, so it can stay in a scene that ships.
     /// It finds what it reports on by itself, so it works in any scene that has the Player in it.
     /// </summary>
     public class TempDebugHud : MonoBehaviour
@@ -22,10 +23,9 @@ namespace HyperInfinite
         EnergyBlastShotgun shotgun;
         Health health;
         Camera view;
-        ScuttlerSpawner waves;
         string lookingAt = "";
         float lookingAtDistance = -1f;
-        bool showPanel = true;
+        bool showPanel;
         float findTimer;
         float dashFlash, ventFlash, meleeFlash, heavyFlash;
 
@@ -33,17 +33,23 @@ namespace HyperInfinite
         readonly GUIContent content = new GUIContent();
         float cursorY;
 
+        void Awake()
+        {
+            useGUILayout = false;   // it places everything itself, so Unity can skip the layout pass
+        }
+
         void Update()
         {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && togglePanel != Key.None && keyboard[togglePanel].wasPressedThisFrame) showPanel = !showPanel;
+            if (!showPanel) return;
+
             findTimer -= Time.unscaledDeltaTime;
             if (findTimer <= 0f)
             {
                 FindParts();
                 findTimer = 1f;
             }
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && togglePanel != Key.None && keyboard[togglePanel].wasPressedThisFrame) showPanel = !showPanel;
-
             float dt = Time.unscaledDeltaTime;
             dashFlash -= dt; ventFlash -= dt; meleeFlash -= dt; heavyFlash -= dt;
             if (controls)
@@ -65,7 +71,6 @@ namespace HyperInfinite
 
         void FindParts()
         {
-            if (!waves) waves = FindAnyObjectByType<ScuttlerSpawner>();
             if (!controls) controls = FindAnyObjectByType<PlayerControls>();
             if (!motor) motor = FindAnyObjectByType<PlayerMotor>();
             if (!shotgun) shotgun = FindAnyObjectByType<EnergyBlastShotgun>();
@@ -76,15 +81,14 @@ namespace HyperInfinite
         void OnGUI()
         {
             if (Event.current.type != EventType.Repaint) return;
+            if (!showPanel && !Debug.isDebugBuild) return;   // nothing at all in a release build until F1
             MakeStyles();
             float scale = Screen.height / 1080f;          // lay out on a 1080-pixel-tall canvas at any resolution
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
-            float width = Screen.width / scale, height = 1080f;
 
-            if (health) DrawHurt(width, height);
             DrawEggMarkers(scale);
 
-            cursorY = waves ? 150f : 14f;   // below PlayerHud's wave counter when there is one
+            cursorY = 150f;   // below PlayerHud's wave counter
             if (!showPanel)
             {
                 Line("F1: show test readouts", small);
@@ -205,14 +209,6 @@ namespace HyperInfinite
                     Fill(new Rect(bar.x, bar.y, bar.width * eggs.Disturbance, bar.height), Color.Lerp(new Color(0.75f, 0.45f, 1f), new Color(1f, 0.3f, 0.2f), eggs.Disturbance));
                 }
             }
-        }
-
-        /// <summary>A red wash over the screen for a moment after each hit.</summary>
-        void DrawHurt(float width, float height)
-        {
-            float t = (Time.time - health.LastDamageTime) / 0.35f;
-            if (t < 0f || t >= 1f) return;
-            Fill(new Rect(0f, 0f, width, height), new Color(0.75f, 0.04f, 0.04f, 0.28f * (1f - t)));
         }
 
         // ---- Drawing helpers --------------------------------------------------------------
