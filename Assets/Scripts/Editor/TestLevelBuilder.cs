@@ -17,7 +17,7 @@ namespace HyperInfinite
     public static class TestLevelBuilder
     {
         const string ScenePath = "Assets/Scenes/TestLevel.unity";
-        const string PrefabFolder = "Assets/Prefabs";              // in Testing/ and Hazards/ subfolders
+        const string PrefabFolder = "Assets/Prefabs";              // in Player/, Hazards/ and Testing/ subfolders
         const string MaterialFolder = "Assets/Materials/Greybox";
         const string TextureFolder = "Assets/Textures/Greybox";
         const string MeshFolder = "Assets/Meshes/Greybox";
@@ -185,7 +185,7 @@ namespace HyperInfinite
             eyes.AddComponent<TempFirstPersonCamera>();
             BuildShotgun(eyes.transform, gunSprite);
 
-            return SavePrefab(root, "Testing", "Player");
+            return SavePrefab(root, "Player", "Player");
         }
 
         /// <summary>
