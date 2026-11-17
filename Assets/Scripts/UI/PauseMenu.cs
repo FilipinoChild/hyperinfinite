@@ -29,12 +29,10 @@ namespace HyperInfinite
         static readonly Color QuitColor = new Color(0.7f, 0.16f, 0.15f);
 
         PlayerControls controls;
-        Health health;
         Canvas canvas;
         GameObject menu;
         Button resumeButton;
         Font font;
-        bool hadCursor, cursorLastFrame;
         float timeScaleBefore = 1f;
 
         /// <summary>True while the game is paused.</summary>
@@ -43,7 +41,6 @@ namespace HyperInfinite
         void Awake()
         {
             controls = GetComponent<PlayerControls>();
-            health = GetComponent<Health>();
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             BuildCanvas();
         }
@@ -68,12 +65,6 @@ namespace HyperInfinite
             }
         }
 
-        void LateUpdate()
-        {
-            // Esc frees the cursor before this script hears it, so remember how it was at the end of each frame.
-            if (controls && !IsPaused) cursorLastFrame = controls.CursorCaptured;
-        }
-
         public void Pause()
         {
             if (IsPaused) return;
@@ -82,12 +73,7 @@ namespace HyperInfinite
             Time.timeScale = 0f;
             AudioListener.pause = true;
             menu.SetActive(true);
-            if (controls)
-            {
-                hadCursor = cursorLastFrame || controls.CursorCaptured;
-                controls.GameplayEnabled = false;
-                controls.SetCursorCaptured(false);
-            }
+            if (controls) controls.Block(this);   // no walking or shooting, and the cursor is free for the buttons
             if (EventSystem.current) EventSystem.current.SetSelectedGameObject(resumeButton.gameObject);   // for Enter
         }
 
@@ -99,12 +85,7 @@ namespace HyperInfinite
             AudioListener.pause = false;
             menu.SetActive(false);
             if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
-            if (controls)
-            {
-                bool dead = health && health.IsDead;   // PlayerHud's death screen keeps the controls off
-                controls.GameplayEnabled = !dead;
-                if (hadCursor && !dead) controls.SetCursorCaptured(true);
-            }
+            if (controls) controls.Unblock(this);   // anything else still open, such as the death screen, keeps its own block
         }
 
         public void GoToMainMenu()

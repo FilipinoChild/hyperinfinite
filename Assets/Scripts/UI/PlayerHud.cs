@@ -62,7 +62,7 @@ namespace HyperInfinite
         Canvas canvas;
         GameObject deathScreen;
         Button respawnButton;
-        bool shownDead, hadCursor;
+        bool shownDead;
         ScuttlerSpawner waves;
         GameObject wavePanel;
         Text waveTitle, waveDetail;
@@ -109,12 +109,7 @@ namespace HyperInfinite
         {
             shownDead = true;
             deathScreen.SetActive(true);
-            if (controls)
-            {
-                hadCursor = controls.CursorCaptured;
-                controls.GameplayEnabled = false;   // the dead don't walk or shoot
-                controls.SetCursorCaptured(false);  // so the button can be clicked
-            }
+            if (controls) controls.Block(this);   // the dead don't walk or shoot, and the cursor is free for the button
             if (EventSystem.current) EventSystem.current.SetSelectedGameObject(respawnButton.gameObject);   // for Enter
         }
 
@@ -124,11 +119,7 @@ namespace HyperInfinite
             deathScreen.SetActive(false);
             if (EventSystem.current && EventSystem.current.currentSelectedGameObject == respawnButton.gameObject)
                 EventSystem.current.SetSelectedGameObject(null);
-            if (controls)
-            {
-                controls.GameplayEnabled = true;
-                if (hadCursor) controls.SetCursorCaptured(true);
-            }
+            if (controls) controls.Unblock(this);
         }
 
         void OnEnable()
