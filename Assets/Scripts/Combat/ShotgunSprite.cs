@@ -5,8 +5,8 @@ namespace HyperInfinite
 {
     /// <summary>
     /// The Energy Blast shotgun gun drawn over the bottom right of the view, 2.5D. It bobs while you run,
-    /// kicks down on every blast, dips while the lever cycles, slides toward the middle as you aim, and
-    /// drops and tilts while venting or overheated. Its emitter cells glow with the gun's charge and heat
+    /// kicks down on every blast, dips while the lever cycles, slides toward the middle as you aim,
+    /// drops and tilts while venting or overheated, and falls out of sight when you go down. Its emitter cells glow with the gun's charge and heat
     /// (EnergyBlastShotgun.GlowColor), a pixel burst flashes at the muzzle on every blast, and the muzzle
     /// Transform is kept on the sprite's muzzle so the bolts start from it.
     ///
@@ -48,6 +48,7 @@ namespace HyperInfinite
 
         EnergyBlastShotgun shotgun;
         PlayerMotor motor;
+        Health health;
         Camera view;
         Canvas canvas;
         RectTransform gun;
@@ -55,12 +56,13 @@ namespace HyperInfinite
         Image flash;
         RectTransform flashRect;
         Texture2D bodyTexture, glowTexture;
-        float bobTime, bobAmount, down;
+        float bobTime, bobAmount, down, dropped;
 
         void Awake()
         {
             shotgun = GetComponent<EnergyBlastShotgun>();
             motor = GetComponentInParent<PlayerMotor>();
+            health = GetComponentInParent<Health>();
             view = GetComponentInParent<Camera>();
             if (!sprite)
             {
@@ -179,6 +181,7 @@ namespace HyperInfinite
             if (moving) bobTime += dt * 11f;
             bool lowered = shotgun.IsOverheated || shotgun.IsVenting;
             down = Mathf.MoveTowards(down, lowered ? 1f : 0f, dt * 6f);
+            dropped = Mathf.MoveTowards(dropped, health && health.IsDead ? 1f : 0f, dt * 3f);   // out of sight while you're down
             float aim = Mathf.SmoothStep(0f, 1f, shotgun.AimBlend);
             float kickPixels = kick * shotgun.Kick * shotgun.Kick * px;
             float lever = shotgun.LeverSwing;
@@ -188,7 +191,8 @@ namespace HyperInfinite
             var rest = new Vector2(-(rightMargin * w + (1f - Pivot.x) * gunWidth), bottom * h);
             var offset = new Vector2(
                 -aimShift * w * aim + Mathf.Cos(bobTime * 0.5f) * bob * px * bobAmount,
-                -(lever * 0.03f + down * 0.08f) * h - Mathf.Abs(Mathf.Sin(bobTime * 0.5f)) * bob * px * bobAmount - kickPixels);
+                -(lever * 0.03f + down * 0.08f + dropped * dropped * 0.6f) * h
+                - Mathf.Abs(Mathf.Sin(bobTime * 0.5f)) * bob * px * bobAmount - kickPixels);
             gun.anchoredPosition = rest + offset;
             // The prototype tips it back (counterclockwise) for each of these: a positive angle in UI space.
             gun.localRotation = Quaternion.Euler(0f, 0f, kickPixels / px * 0.12f + lever * 10f + down * 14f);

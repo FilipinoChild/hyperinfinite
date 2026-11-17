@@ -9,7 +9,8 @@ namespace HyperInfinite
     ///  - it sits on a child of the Player at eye height;
     ///  - it turns the Player root left and right (PlayerMotor moves the way the root faces);
     ///  - it tilts itself up and down;
-    ///  - it narrows the view while LeverShotgun.AimBlend rises and kicks up on its onRecoil event.
+    ///  - it narrows the view while EnergyBlastShotgun.AimBlend rises and kicks up on its onRecoil event;
+    ///  - it drops to the ground and tips over when the player goes down, and gets back up on respawn.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     [DefaultExecutionOrder(-50)]   // after PlayerControls reads input, before movement and shooting
@@ -30,10 +31,16 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float fieldOfViewSpeed = 12f;
         [Tooltip("Meters the view dips on a hard landing.")]
         [SerializeField, Range(0f, 0.3f)] float landingDip = 0.08f;
+        [Tooltip("Eye height while down, in meters above the feet.")]
+        [SerializeField, Range(0.1f, 1f)] float downEyeHeight = 0.4f;
+        [Tooltip("Degrees the view tips over while down.")]
+        [SerializeField, Range(0f, 60f)] float downTilt = 24f;
 
         Camera view;
         PlayerMotor motor;
         EnergyBlastShotgun shotgun;
+        Health health;
+        float down;    // 0 standing, 1 flat on the ground
         float pitch;   // degrees; positive looks down, as Unity rotates about X
         float recoil;  // degrees of upward kick that settles back down
         float eyeHeight, dip;
@@ -47,6 +54,7 @@ namespace HyperInfinite
             if (!body) body = controls ? controls.transform : transform.parent;
             motor = GetComponentInParent<PlayerMotor>();
             shotgun = GetComponentInChildren<EnergyBlastShotgun>();
+            health = GetComponentInParent<Health>();
             view.fieldOfView = fieldOfView;
             float x = transform.localEulerAngles.x;
             pitch = x > 180f ? x - 360f : x;
@@ -72,7 +80,7 @@ namespace HyperInfinite
             if (body) body.Rotate(0f, look.x, 0f, Space.World);
             pitch = Mathf.Clamp(pitch - look.y, -pitchLimit, pitchLimit);
             recoil *= Mathf.Pow(0.0008f, Time.deltaTime);   // the web prototype's settle: about half gone in 0.1 s
-            transform.localRotation = Quaternion.Euler(pitch - recoil, 0f, 0f);
+            transform.localRotation = Quaternion.Euler(pitch - recoil, 0f, downTilt * Mathf.SmoothStep(0f, 1f, down));
         }
 
         void LateUpdate()
@@ -82,9 +90,13 @@ namespace HyperInfinite
             if (motor && motor.IsDashing) target = dashFieldOfView;
             view.fieldOfView = Mathf.Lerp(view.fieldOfView, target, 1f - Mathf.Exp(-fieldOfViewSpeed * dt));
 
+            // Going down drops the view to the ground quickly; getting up is quicker still.
+            bool dead = health && health.IsDead;
+            down = Mathf.MoveTowards(down, dead ? 1f : 0f, dt * (dead ? 2.5f : 5f));
+
             dip = Mathf.Lerp(dip, 0f, 1f - Mathf.Exp(-10f * dt));
             Vector3 p = transform.localPosition;
-            p.y = eyeHeight - dip;
+            p.y = Mathf.Lerp(eyeHeight, downEyeHeight, Mathf.SmoothStep(0f, 1f, down)) - dip;
             transform.localPosition = p;
         }
 

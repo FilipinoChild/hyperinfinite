@@ -188,6 +188,15 @@ namespace HyperInfinite
             return true;
         }
 
+        /// <summary>Cold and ready to fire at once, whatever it was doing: for respawns.</summary>
+        public void CoolCompletely()
+        {
+            heat = 0f;
+            overheatTimer = 0f;
+            cycleTimer = 0f;
+            venting = false;
+        }
+
         void Cool(float dt)
         {
             if (overheatTimer > 0f)

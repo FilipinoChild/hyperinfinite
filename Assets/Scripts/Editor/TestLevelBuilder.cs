@@ -72,14 +72,10 @@ namespace HyperInfinite
             BuildFiringRange(kit, level, dummyPrefab);
             BuildEggGarden(kit, level, eggsPrefab);
 
-            var spawn = new GameObject("Spawn Point").transform;
-            spawn.position = SpawnPosition;
             var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
             player.transform.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
 
             new GameObject("Debug HUD (temporary)").AddComponent<TempDebugHud>();
-            var respawner = new GameObject("Respawner (temporary)").AddComponent<TempRespawner>();
-            Wire(respawner, "spawnPoint", spawn);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -167,6 +163,7 @@ namespace HyperInfinite
             Wire(controls, "actions", controlsAsset);
             root.AddComponent<PlayerMotor>();
             root.AddComponent<Health>();
+            root.AddComponent<PlayerRespawn>();   // getting back up where you fell, and falls out of the level
             root.AddComponent<PlayerHud>();   // HP and the dash cooldown, bottom left
             root.AddComponent<PauseMenu>();   // Esc: resume, main menu or quit
 

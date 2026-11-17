@@ -37,8 +37,6 @@ namespace HyperInfinite
         [SerializeField, Range(0f, 1f)] float lowHealth = 0.3f;
         [Tooltip("Seconds a hit's trail lingers before it drains.")]
         [SerializeField, Min(0f)] float trailDelay = 0.45f;
-        [Tooltip("Seconds of immunity after respawning, so nothing can knock you straight back down.")]
-        [SerializeField, Min(0f)] float respawnProtection = 2f;
 
         static readonly Color PanelColor = new Color(0.04f, 0.03f, 0.06f, 0.7f);
         static readonly Color TrackColor = new Color(0.16f, 0.14f, 0.2f, 1f);
@@ -50,6 +48,8 @@ namespace HyperInfinite
         static readonly Color DashCoolingColor = new Color(0.36f, 0.42f, 0.55f);
 
         Health health;
+        PlayerRespawn respawn;
+        Text respawnHint;
         PlayerMotor motor;
         PlayerControls controls;
         EnergyBlastShotgun shotgun;
@@ -77,6 +77,8 @@ namespace HyperInfinite
         void Awake()
         {
             health = GetComponent<Health>();
+            respawn = GetComponent<PlayerRespawn>();
+            if (!respawn && health) respawn = gameObject.AddComponent<PlayerRespawn>();   // an older Player prefab without one
             motor = GetComponent<PlayerMotor>();
             controls = GetComponent<PlayerControls>();
             shotgun = GetComponentInChildren<EnergyBlastShotgun>();
@@ -100,16 +102,13 @@ namespace HyperInfinite
         /// <summary>Back on your feet where you fell, at full health. Nothing else resets.</summary>
         public void Respawn()
         {
-            if (!health || !health.IsDead) return;
-            health.Revive(respawnProtection);
-            HideDeathScreen();
+            if (respawn && respawn.Respawn()) HideDeathScreen();
         }
 
         void ShowDeathScreen()
         {
             shownDead = true;
             deathScreen.SetActive(true);
-            if (controls) controls.Block(this);   // the dead don't walk or shoot, and the cursor is free for the button
             if (EventSystem.current) EventSystem.current.SetSelectedGameObject(respawnButton.gameObject);   // for Enter
         }
 
@@ -119,7 +118,6 @@ namespace HyperInfinite
             deathScreen.SetActive(false);
             if (EventSystem.current && EventSystem.current.currentSelectedGameObject == respawnButton.gameObject)
                 EventSystem.current.SetSelectedGameObject(null);
-            if (controls) controls.Unblock(this);
         }
 
         void OnEnable()
@@ -345,9 +343,9 @@ namespace HyperInfinite
             Text label = Label("Label", buttonRect, Vector2.zero, new Vector2(320f, 76f), "RESPAWN", 34, TextAnchor.MiddleCenter, FontStyle.Bold);
             Center(label.rectTransform, Vector2.zero);
 
-            Text hint = Label("Hint", dim, Vector2.zero, new Vector2(900f, 30f), "Click, or press Enter", 20, TextAnchor.MiddleCenter, FontStyle.Normal);
-            Center(hint.rectTransform, new Vector2(0f, -112f));
-            hint.color = new Color(1f, 1f, 1f, 0.7f);
+            respawnHint = Label("Hint", dim, Vector2.zero, new Vector2(900f, 30f), "", 20, TextAnchor.MiddleCenter, FontStyle.Normal);
+            Center(respawnHint.rectTransform, new Vector2(0f, -112f));
+            respawnHint.color = new Color(1f, 1f, 1f, 0.7f);
 
             deathScreen.SetActive(false);
         }
@@ -368,6 +366,16 @@ namespace HyperInfinite
             {
                 if (health.IsDead && !shownDead) ShowDeathScreen();
                 else if (!health.IsDead && shownDead) HideDeathScreen();   // revived by something else
+                if (shownDead && respawn)
+                {
+                    // The button wakes up a beat after you go down, so a click meant for the fight can't skip this screen.
+                    bool ready = respawn.CanRespawn;
+                    if (respawnButton.interactable != ready || respawnHint.text.Length == 0)
+                    {
+                        respawnButton.interactable = ready;
+                        respawnHint.text = ready ? "Click, or press Enter" : "Thrusters charging...";
+                    }
+                }
 
                 float f = Mathf.Clamp01(health.Fraction);
                 SetFill(healthFill, f);

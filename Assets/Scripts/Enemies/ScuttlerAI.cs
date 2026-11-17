@@ -9,7 +9,7 @@ namespace HyperInfinite
     /// If the player is up on a platform, a Scuttler pounces up to reach them.
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Health))]
-    public class ScuttlerAI : MonoBehaviour
+    public class ScuttlerAI : MonoBehaviour, IPushable
     {
         // Every living Scuttler in the scene. "static" means one shared list for all of them.
         static readonly List<ScuttlerAI> pack = new List<ScuttlerAI>();
@@ -188,6 +188,16 @@ namespace HyperInfinite
 
             if (NavMesh.SamplePosition(target, out NavMeshHit hit, 2f, NavMesh.AllAreas))
                 agent.SetDestination(hit.position);
+        }
+
+        /// Thrown back by a blast, such as the burst when the player respawns. It skids away,
+        /// then has to regroup and flank again.
+        public void Push(Vector3 velocityChange)
+        {
+            if (!player || !agent.isOnNavMesh) return;
+            Scatter();
+            velocityChange.y = 0f;           // it stays on the ground
+            agent.velocity = velocityChange;
         }
 
         void Bite(float flatDistance, float heightAbove)
