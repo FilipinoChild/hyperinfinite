@@ -140,7 +140,6 @@ MonoBehaviour:
   aimOrigin: {fileID: 0}
   emitters:
   - {fileID: 3437371736149457241}
-  lever: {fileID: 0}
   muzzleFlash: {fileID: 6875531440380078929}
   bolts: 9
   boltDamage: 9
@@ -152,7 +151,6 @@ MonoBehaviour:
   cycleTime: 0.55
   holdToRefire: 1
   aimSpread: 2.6
-  aimPosition: {x: 0, y: -0.065, z: 0.17}
   aimSpeed: 6
   heatPerShot: 21
   coolingRate: 22
@@ -161,13 +159,9 @@ MonoBehaviour:
   ventRate: 140
   recoilHip: 4.6
   recoilAim: 2.9
-  glowParts: []
   chargedGlow: {r: 0.3, g: 1.5, b: 2.4, a: 1}
   hotGlow: {r: 2.6, g: 0.75, b: 0.15, a: 1}
   overheatGlow: {r: 3.5, g: 0.25, b: 0.08, a: 1}
-  boltColor: {r: 0.45, g: 0.95, b: 1, a: 0.95}
-  sparkColor: {r: 0.65, g: 0.95, b: 1, a: 1}
-  hitColor: {r: 0.55, g: 1, b: 0.35, a: 1}
   flashIntensity: 3
   onFire:
     m_PersistentCalls:

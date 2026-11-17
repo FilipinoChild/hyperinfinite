@@ -7,8 +7,8 @@ namespace HyperInfinite
     /// The Energy Blast shotgun gun drawn over the bottom right of the view, 2.5D. It bobs while you run,
     /// kicks down on every blast, dips while the lever cycles, slides toward the middle as you aim, and
     /// drops and tilts while venting or overheated. Its emitter cells glow with the gun's charge and heat
-    /// (EnergyBlastShotgun.GlowColor), and the muzzle Transform is kept on the sprite's muzzle so the bolts
-    /// start from it.
+    /// (EnergyBlastShotgun.GlowColor), a pixel burst flashes at the muzzle on every blast, and the muzzle
+    /// Transform is kept on the sprite's muzzle so the bolts start from it.
     ///
     /// Put it next to EnergyBlastShotgun, under the camera. It makes its own screen-space canvas, so the
     /// gun never pokes into walls. The texture needs Read/Write switched on for the emitter glow, and
@@ -44,6 +44,7 @@ namespace HyperInfinite
         // From the prototype: the gun rotates around a point 80% of the way across its bottom edge.
         static readonly Vector2 Pivot = new Vector2(0.8f, 0f);
         const float FullGlow = 2.4f;   // GlowColor's brightest channel when fully charged
+        const float FlashTime = 0.08f;  // seconds the muzzle flash shows
 
         EnergyBlastShotgun shotgun;
         PlayerMotor motor;
@@ -51,6 +52,8 @@ namespace HyperInfinite
         Canvas canvas;
         RectTransform gun;
         RawImage body, glow;
+        Image flash;
+        RectTransform flashRect;
         Texture2D bodyTexture, glowTexture;
         float bobTime, bobAmount, down;
 
@@ -143,15 +146,27 @@ namespace HyperInfinite
             body.texture = bodyTexture;
             body.raycastTarget = false;
 
-            if (!glowTexture) return;
-            var glowRect = new GameObject("Emitter Glow", typeof(RectTransform)).GetComponent<RectTransform>();
-            glowRect.SetParent(gun, false);
-            glowRect.anchorMin = Vector2.zero;
-            glowRect.anchorMax = Vector2.one;
-            glowRect.offsetMin = glowRect.offsetMax = Vector2.zero;
-            glow = glowRect.gameObject.AddComponent<RawImage>();
-            glow.texture = glowTexture;
-            glow.raycastTarget = false;
+            if (glowTexture)
+            {
+                var glowRect = new GameObject("Emitter Glow", typeof(RectTransform)).GetComponent<RectTransform>();
+                glowRect.SetParent(gun, false);
+                glowRect.anchorMin = Vector2.zero;
+                glowRect.anchorMax = Vector2.one;
+                glowRect.offsetMin = glowRect.offsetMax = Vector2.zero;
+                glow = glowRect.gameObject.AddComponent<RawImage>();
+                glow.texture = glowTexture;
+                glow.raycastTarget = false;
+            }
+
+            // The muzzle flash is pinned to the muzzle in the image, so it follows the gun wherever it moves.
+            flashRect = new GameObject("Muzzle Flash", typeof(RectTransform)).GetComponent<RectTransform>();
+            flashRect.SetParent(gun, false);
+            flashRect.anchorMin = flashRect.anchorMax = new Vector2(muzzlePixel.x / sprite.width, 1f - muzzlePixel.y / sprite.height);
+            flashRect.anchoredPosition = Vector2.zero;
+            flash = flashRect.gameObject.AddComponent<Image>();
+            flash.sprite = PixelArt.MuzzleFlash;
+            flash.raycastTarget = false;
+            flash.enabled = false;
         }
 
         void LateUpdate()
@@ -187,6 +202,18 @@ namespace HyperInfinite
                 Color hue = peak > 0f ? Color.Lerp(new Color(g.r / peak, g.g / peak, g.b / peak), Color.white, 0.2f) : Color.black;
                 hue.a = Mathf.Clamp01(peak / FullGlow);
                 glow.color = hue;
+            }
+
+            // Two frames of flash: a big white burst, then a smaller cyan one.
+            ShotReport shot = shotgun.LastShot;
+            float sinceShot = Time.time - shot.Time;
+            bool flashing = shot.Bolts > 0 && sinceShot < FlashTime;
+            flash.enabled = flashing;
+            if (flashing)
+            {
+                bool first = sinceShot < FlashTime * 0.5f;
+                flashRect.sizeDelta = Vector2.one * (gunHeight * (first ? 0.5f : 0.32f));
+                flash.color = first ? Palette.White : Palette.Cyan;
             }
 
             if (muzzle && view)

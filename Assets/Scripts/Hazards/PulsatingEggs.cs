@@ -189,7 +189,8 @@ namespace HyperInfinite
             regrowTimer = regrowTime;
             if (hitbox) hitbox.enabled = false;
             Vector3 center = transform.position + Vector3.up * 0.5f;
-            StreakFx.Burst(center, gooColor, 26, 7f, 0.6f);
+            PixelFx.Burst(center, gooColor, eggColor, 26, 7f, 0.6f, 0.18f);
+            PixelFx.Ring(transform.position, burstRadius, gooColor, 20, 0.3f);   // how far the eruption reaches
             Splash(center);
             SpawnSwarm();
             onErupt.Invoke();

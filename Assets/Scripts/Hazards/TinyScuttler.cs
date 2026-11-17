@@ -35,7 +35,6 @@ namespace HyperInfinite
         [Tooltip("Seconds before it withers away on its own.")]
         [SerializeField, Min(0.1f)] float lifetime = 6f;
         [SerializeField, Min(0.05f)] float radius = 0.3f;
-        [SerializeField] Color gooColor = new Color(0.62f, 0.85f, 0.25f, 1f);
 
         /// <summary>Every live one, so the swarm keeps its spacing and respawns can clear them.</summary>
         public static readonly List<TinyScuttler> Active = new List<TinyScuttler>();
@@ -83,7 +82,7 @@ namespace HyperInfinite
         public void TakeDamage(DamageInfo damage)
         {
             if (withering) return;
-            StreakFx.Burst(transform.position + Vector3.up * 0.2f, gooColor, 8, 3.5f, 0.35f);
+            PixelFx.Burst(transform.position + Vector3.up * 0.2f, Palette.Red, Palette.Navy, 8, 3.5f, 0.35f, 0.09f);   // bits of its sprite
             Destroy(gameObject);
         }
 
