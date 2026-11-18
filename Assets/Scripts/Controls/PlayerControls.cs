@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -13,6 +14,11 @@ namespace HyperInfinite
     /// To rebind, double-click that asset and edit it in the Input Actions editor; no code changes.
     /// Every other script asks this component what the player wants to do this frame (move, look,
     /// jump, fire...).
+    ///
+    /// Menus switch gameplay input off with Block and back on with Unblock. While anything blocks, the
+    /// cursor is free; when the last block lifts, the cursor is captured again. Fire only counts once
+    /// the button has been seen released, so a button that's already down when play starts or resumes
+    /// (the click that started the level, closed a menu or captured the cursor) never fires a blast.
     /// </summary>
     [DefaultExecutionOrder(-100)]   // read input before anything uses it
     [DisallowMultipleComponent]
@@ -62,8 +68,8 @@ namespace HyperInfinite
         /// <summary>True when the gamepad was the last device used, for showing the right button prompts.</summary>
         public bool UsingGamepad { get; private set; }
 
-        /// <summary>Menus switch this off so their clicks and keys don't reach the game. Pause still reports.</summary>
-        public bool GameplayEnabled { get; set; } = true;
+        /// <summary>False while a menu has gameplay input switched off (see Block). Pause still reports.</summary>
+        public bool GameplayEnabled => blockers.Count == 0;
         /// <summary>True when gameplay input is getting through this frame.</summary>
         public bool IsLive { get; private set; }
         public bool CursorCaptured => Cursor.lockState == CursorLockMode.Locked;
@@ -81,7 +87,9 @@ namespace HyperInfinite
         InputActionMap player;
         InputAction move, look, jump, dash, fire, aim, vent, melee, pause;
         InputAction[] all;
+        readonly List<object> blockers = new List<object>(4);
         bool meleeDown;
+        bool fireLatched = true;   // Fire is ignored until it has been seen released
 
         void Awake()
         {
@@ -125,8 +133,8 @@ namespace HyperInfinite
             InputControl last = ControlInUse();
             if (last != null) UsingGamepad = last.device is Gamepad;
 
-            // Esc frees the cursor; clicking the game captures it again. That first click only
-            // captures, so it never fires a shot.
+            // Esc frees the cursor; clicking the game captures it again. That click only captures:
+            // input stays off for its frame, and Fire has to be let go before it counts.
             bool justCaptured = false;
             if (lockCursor)
             {
@@ -156,10 +164,30 @@ namespace HyperInfinite
             JumpPressed = jump.WasPressedThisFrame();
             JumpHeld = jump.IsPressed();
             DashPressed = dash.WasPressedThisFrame();
-            FirePressed = fire.WasPressedThisFrame();
-            FireHeld = fire.IsPressed();
+            bool fireDown = fire.IsPressed();
+            if (!fireDown) fireLatched = false;   // let go: the next press is a real one
+            FirePressed = !fireLatched && fire.WasPressedThisFrame();
+            FireHeld = !fireLatched && fireDown;
             VentPressed = vent.WasPressedThisFrame();
             ReadMelee();
+        }
+
+        /// <summary>
+        /// Switches gameplay input off for as long as <paramref name="owner"/> keeps its block, and frees the
+        /// cursor for it. Menus call this when they open. Blocking twice with the same owner counts once.
+        /// </summary>
+        public void Block(object owner)
+        {
+            if (owner == null || blockers.Contains(owner)) return;
+            blockers.Add(owner);
+            if (lockCursor) SetCursorCaptured(false);
+        }
+
+        /// <summary>Lifts <paramref name="owner"/>'s block. When the last one lifts, play resumes with the cursor captured.</summary>
+        public void Unblock(object owner)
+        {
+            if (!blockers.Remove(owner) || blockers.Count > 0) return;
+            if (lockCursor && isActiveAndEnabled) SetCursorCaptured(true);
         }
 
         /// <summary>Locks and hides the cursor for play, or frees it for menus.</summary>
@@ -223,6 +251,7 @@ namespace HyperInfinite
             VentPressed = QuickMeleePressed = HeavyMeleeReleased = false;
             MeleeHoldTime = 0f;
             meleeDown = false;
+            fireLatched = true;
             IsLive = false;
         }
     }

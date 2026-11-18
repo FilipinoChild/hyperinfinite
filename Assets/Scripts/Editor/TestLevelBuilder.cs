@@ -17,7 +17,7 @@ namespace HyperInfinite
     public static class TestLevelBuilder
     {
         const string ScenePath = "Assets/Scenes/TestLevel.unity";
-        const string PrefabFolder = "Assets/Prefabs";              // in Testing/ and Hazards/ subfolders
+        const string PrefabFolder = "Assets/Prefabs";              // in Player/, Hazards/ and Testing/ subfolders
         const string MaterialFolder = "Assets/Materials/Greybox";
         const string TextureFolder = "Assets/Textures/Greybox";
         const string MeshFolder = "Assets/Meshes/Greybox";
@@ -72,19 +72,15 @@ namespace HyperInfinite
             BuildFiringRange(kit, level, dummyPrefab);
             BuildEggGarden(kit, level, eggsPrefab);
 
-            var spawn = new GameObject("Spawn Point").transform;
-            spawn.position = SpawnPosition;
             var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
             player.transform.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
 
             new GameObject("Debug HUD (temporary)").AddComponent<TempDebugHud>();
-            var respawner = new GameObject("Respawner (temporary)").AddComponent<TempRespawner>();
-            Wire(respawner, "spawnPoint", spawn);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
             Selection.activeGameObject = player;
-            Debug.Log("Hyper Infinite: built " + ScenePath + ". Press Play, then click the Game view to capture the mouse.");
+            Debug.Log("Hyper Infinite: built " + ScenePath + ". Press Play, then click the Game view to start.");
         }
 
         // ---- The player ------------------------------------------------------------------
@@ -147,7 +143,7 @@ namespace HyperInfinite
                 var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                 if (texture) return texture;
             }
-            EditorUtility.DisplayDialog("Sprite needed", "The test level needs " + path + ", the pixel art from the 10 Pager. " +
+            EditorUtility.DisplayDialog("Sprite needed", "The test level needs " + path + ". " +
                                         "Add it with exactly that name and folder, then build again.\n\nThe build stopped before changing anything.", "OK");
             return null;
         }
@@ -167,8 +163,10 @@ namespace HyperInfinite
             Wire(controls, "actions", controlsAsset);
             root.AddComponent<PlayerMotor>();
             root.AddComponent<Health>();
+            root.AddComponent<PlayerRespawn>();   // getting back up where you fell, and falls out of the level
             root.AddComponent<PlayerHud>();   // HP and the dash cooldown, bottom left
             root.AddComponent<PauseMenu>();   // Esc: resume, main menu or quit
+            root.AddComponent<StartScreen>(); // the controls, and click to start
 
             // Casts the player's shadow without getting in the first-person view.
             var shadow = Primitive(PrimitiveType.Capsule, "Shadow Body", root.transform, new Vector3(0f, 0.9f, 0f),
@@ -185,7 +183,7 @@ namespace HyperInfinite
             eyes.AddComponent<TempFirstPersonCamera>();
             BuildShotgun(eyes.transform, gunSprite);
 
-            return SavePrefab(root, "Testing", "Player");
+            return SavePrefab(root, "Player", "Player");
         }
 
         /// <summary>
@@ -732,7 +730,7 @@ namespace HyperInfinite
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>Saves into a subfolder of Prefabs, so it can never overwrite a teammate's prefab of the same name.</summary>
+        /// <summary>Saves into a subfolder of Prefabs, so it can never overwrite another prefab of the same name.</summary>
         static GameObject SavePrefab(GameObject template, string folder, string name)
         {
             Folder(PrefabFolder + "/" + folder);

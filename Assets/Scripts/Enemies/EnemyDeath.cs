@@ -28,7 +28,11 @@ namespace HyperInfinite
 
         void Die()
         {
-            Debug.Log(name + " died");
+            // Burst into bits of its sprite: more of them, thrown further, the tougher the enemy was
+            int pieces = Mathf.Clamp(Mathf.RoundToInt(health.Max / 5f), 10, 60);
+            Vector3 middle = transform.position + Vector3.up * 0.8f;
+            PixelFx.Burst(middle, Palette.Red, Palette.Navy, pieces, 4f + pieces * 0.08f, 0.55f, 0.16f);
+            PixelFx.Flash(middle, Palette.White, 0.9f);
             // Remove this enemy from the scene
             Destroy(gameObject);
         }

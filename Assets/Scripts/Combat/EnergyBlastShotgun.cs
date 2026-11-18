@@ -14,7 +14,7 @@ namespace HyperInfinite
     }
 
     /// <summary>
-    /// COMBAT MECHANIC 1. John Infinite's Energy Blast shotgun: a lever-action
+    /// COMBAT MECHANIC 1. The Energy Blast shotgun: a lever-action
     /// shotgun that fires heavy energy blasts instead of shells. Each blast sends a cone of energy bolts
     /// from the center of the screen. Every bolt does full damage up close and less further out, so the
     /// gun hits hardest up close. Between blasts the lever has to cycle.
@@ -23,9 +23,9 @@ namespace HyperInfinite
     /// Reach 100 and it overheats, locking up for a few seconds. Venting (R) dumps the heat early, but
     /// you can't fire while it does. Aiming (right mouse) tightens the cone so more bolts land at range.
     ///
-    /// Put this on the gun model under the camera. Bolts fly from the camera's center, so they land
-    /// around the crosshair; their streaks start at the emitters so they look right. Anything with an
-    /// IDamageable component takes the hits.
+    /// Put this under the camera, next to ShotgunSprite, which draws the gun. Bolts fly from the camera's
+    /// center, so they land around the crosshair; the bolts you see start at the emitters so they look
+    /// right. Anything with an IDamageable component takes the hits.
     /// </summary>
     [DisallowMultipleComponent]
     public class EnergyBlastShotgun : MonoBehaviour
@@ -34,10 +34,8 @@ namespace HyperInfinite
         [SerializeField] PlayerControls controls;
         [Tooltip("Bolts fly from the center of this camera. Defaults to the camera above this object.")]
         [SerializeField] Transform aimOrigin;
-        [Tooltip("The tips of the emitters. Bolt streaks start from them in turn. Without any, they start here.")]
+        [Tooltip("The tips of the emitters. The bolts you see start from them in turn. Without any, they start here.")]
         [SerializeField] Transform[] emitters = new Transform[0];
-        [Tooltip("Swings down and back while the lever cycles. Optional.")]
-        [SerializeField] Transform lever;
         [Tooltip("Lights up for each blast. Optional.")]
         [SerializeField] Light muzzleFlash;
 
@@ -64,8 +62,6 @@ namespace HyperInfinite
         [Header("Aiming (hold Aim)")]
         [Tooltip("Half-angle of the bolt cone while aiming, in degrees.")]
         [SerializeField, Range(0f, 20f)] float aimSpread = 2.6f;
-        [Tooltip("Where the gun sits while aiming, relative to the camera.")]
-        [SerializeField] Vector3 aimPosition = new Vector3(0f, -0.065f, 0.17f);
         [Tooltip("How fast the gun comes up to aim and goes back down; 6 takes about a sixth of a second.")]
         [SerializeField, Min(0.1f)] float aimSpeed = 6f;
 
@@ -88,8 +84,6 @@ namespace HyperInfinite
         [SerializeField, Range(0f, 15f)] float recoilAim = 2.9f;
 
         [Header("Energy glow (GlowColor)")]
-        [Tooltip("Renderers that glow with the gun's charge and heat: the emitters and the receiver light. Their material needs emission switched on.")]
-        [SerializeField] Renderer[] glowParts = new Renderer[0];
         [Tooltip("Ready to fire and cool.")]
         [SerializeField, ColorUsage(false, true)] Color chargedGlow = new Color(0.3f, 1.5f, 2.4f);
         [Tooltip("Close to overheating.")]
@@ -97,10 +91,7 @@ namespace HyperInfinite
         [SerializeField, ColorUsage(false, true)] Color overheatGlow = new Color(3.5f, 0.25f, 0.08f);
 
         [Header("Effects")]
-        [SerializeField] Color boltColor = new Color(0.45f, 0.95f, 1f, 0.95f);
-        [SerializeField] Color sparkColor = new Color(0.65f, 0.95f, 1f, 1f);
-        [Tooltip("Sparks where a bolt hits something that takes damage.")]
-        [SerializeField] Color hitColor = new Color(0.55f, 1f, 0.35f, 1f);
+        [Tooltip("How brightly the muzzle light flashes on each blast.")]
         [SerializeField, Min(0f)] float flashIntensity = 3f;
 
         [Header("Events (hook sounds up here)")]
@@ -125,9 +116,6 @@ namespace HyperInfinite
         }
 
         readonly List<Pending> pending = new List<Pending>(16);
-        MaterialPropertyBlock glowBlock;
-        Vector3 restPosition;
-        Quaternion restRotation, leverRest;
         float cycleTimer, flash, heat, overheatTimer;
         int nextEmitter;
         bool venting;
@@ -168,7 +156,6 @@ namespace HyperInfinite
                 var view = GetComponentInParent<Camera>();
                 aimOrigin = view ? view.transform : transform;
             }
-            if (lever) leverRest = lever.localRotation;
             if (muzzleFlash)
             {
                 muzzleFlash.intensity = 0f;
@@ -199,6 +186,15 @@ namespace HyperInfinite
             venting = true;
             onVent.Invoke();
             return true;
+        }
+
+        /// <summary>Cold and ready to fire at once, whatever it was doing: for respawns.</summary>
+        public void CoolCompletely()
+        {
+            heat = 0f;
+            overheatTimer = 0f;
+            cycleTimer = 0f;
+            venting = false;
         }
 
         void Cool(float dt)
@@ -259,11 +255,11 @@ namespace HyperInfinite
                     {
                         Add(target, hit, DamageAt(hit.distance));
                         landed++;
-                        StreakFx.Sparks(hit.point, hit.normal, hitColor, 3, 5f, 0.3f);
+                        PixelFx.Sparks(hit.point, hit.normal, Palette.Yellow, 3, 5f, 0.3f);   // it hurt something
                     }
-                    else StreakFx.Sparks(hit.point, hit.normal, sparkColor, 2, 6f, 0.22f);
+                    else PixelFx.Sparks(hit.point, hit.normal, Palette.PaleCyan, 2, 6f, 0.22f);
                 }
-                StreakFx.Tracer(NextEmitter().position, end, boltColor, 0.035f, 0.11f);
+                PixelFx.Bolt(NextEmitter().position, end, Palette.Cyan, 0.06f, 0.11f);
             }
 
             // One hit per target with all its bolts added up, so a target sees the whole blast at once.
@@ -290,7 +286,7 @@ namespace HyperInfinite
             if (overheatedNow) onOverheat.Invoke();
         }
 
-        /// <summary>The emitter tip the next bolt streak starts from, taking turns.</summary>
+        /// <summary>The emitter tip the next bolt starts from, taking turns.</summary>
         Transform NextEmitter()
         {
             if (emitters.Length == 0) return transform;

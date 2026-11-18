@@ -17,8 +17,8 @@ namespace HyperInfinite
     }
 
     /// <summary>
-    /// HAZARD 1. Pulsating Arachturn Eggs, which "erupt into a swarm of
-    /// Scuttlers if shot, touched, or walked past".
+    /// HAZARD 1. Pulsating Arachturn Eggs, which erupt into a swarm of
+    /// Scuttlers if shot, touched or walked past.
     ///
     /// A dormant cluster pulses quietly. Walk past and it starts to wake, faster the closer you are, and
     /// its pulse quickens and reddens to show it. Fully awake, it swells for a moment (the warning) and
@@ -89,6 +89,7 @@ namespace HyperInfinite
         Transform player;
         float playerSearchTimer;
         float quietTime, warningTimer, regrowTimer, hitFlash, collapse;
+        float drawnCollapse = -1f;   // how slumped the eggs were the last time they were posed
         Vector3[] eggScale, eggPosition;
         float[] eggPhase;
         Renderer[] eggRenderers;
@@ -189,7 +190,8 @@ namespace HyperInfinite
             regrowTimer = regrowTime;
             if (hitbox) hitbox.enabled = false;
             Vector3 center = transform.position + Vector3.up * 0.5f;
-            StreakFx.Burst(center, gooColor, 26, 7f, 0.6f);
+            PixelFx.Burst(center, gooColor, eggColor, 26, 7f, 0.6f, 0.18f);
+            PixelFx.Ring(transform.position, burstRadius, gooColor, 20, 0.3f);   // how far the eruption reaches
             Splash(center);
             SpawnSwarm();
             onErupt.Invoke();
@@ -306,6 +308,11 @@ namespace HyperInfinite
             bool husk = State == EggState.Spent;
             collapse = Mathf.MoveTowards(collapse, husk ? 1f : 0f, dt * (husk ? 8f : 0.7f));   // slumps fast, grows back slowly
 
+            // Skip posing them when it would change nothing anyone can see: a husk that has finished
+            // slumping stays as it is, and dormant eggs no camera is looking at don't need to pulse.
+            if (husk ? collapse >= 1f && hitFlash <= 0f && drawnCollapse >= 1f : State == EggState.Dormant && !OnScreen()) return;
+            drawnCollapse = hitFlash > 0f ? -1f : collapse;
+
             float d = Disturbance;
             // At rest: the prototype's beat (2.4 radians a second) and size (7%). Waking speeds it up.
             float frequency = Mathf.Lerp(0.38f, 3.2f, d);
@@ -340,6 +347,14 @@ namespace HyperInfinite
                 block.SetColor("_Color", surface);
                 eggRenderers[i].SetPropertyBlock(block);
             }
+        }
+
+        /// <summary>True while any camera can see at least one of the eggs.</summary>
+        bool OnScreen()
+        {
+            for (int i = 0; i < eggRenderers.Length; i++)
+                if (eggRenderers[i] && eggRenderers[i].isVisible) return true;
+            return false;
         }
 
         void OnDrawGizmosSelected()

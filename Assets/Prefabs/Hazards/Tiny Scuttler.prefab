@@ -199,4 +199,3 @@ MonoBehaviour:
   biteRange: 0.9
   lifetime: 6
   radius: 0.3
-  gooColor: {r: 0.62, g: 0.85, b: 0.25, a: 1}
