@@ -12,10 +12,9 @@ namespace HyperInfinite
     ///
     /// In the middle sits the crosshair. Its gap shows the shotgun's spread, so it tightens as you aim,
     /// and red marks flash at its corners when a blast lands. Below it is the shotgun's heat gauge: amber
-    /// as heat builds, flashing just before the next blast would overheat the gun, and red while it's
-    /// locked. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
+    /// as heat builds, flashing when the next blast would redline the gun, and red once it has. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
     /// fills up, flashes when the dash is ready and then gets out of the way, so you can tell without
-    /// looking down. VENT NOW, VENTING or OVERHEATED shows below both, only when there's something to do.
+    /// looking down. LAST SHOT, VENTING or REDLINE! VENT OR BASH shows below both, only when there's something to do.
     /// Above the crosshair, WEBBED! SHOOT THE WEB blinks while a Web Trap has hold of you.
     ///
     /// Top left is the wave counter, for scenes with a ScuttlerSpawner: GET READY before the first wave,
@@ -359,16 +358,18 @@ namespace HyperInfinite
         {
             if (!shotgun) return;
             float heat = Mathf.Clamp01(shotgun.Heat01);
-            bool flashing = shotgun.AboutToOverheat && Mathf.Repeat(Time.unscaledTime * 6f, 1f) < 0.5f;
+            bool flashing = shotgun.AboutToRedline && Mathf.Repeat(Time.unscaledTime * 6f, 1f) < 0.5f;
+            bool redlined = shotgun.IsRedlined;
             UiKit.SetFill(heatFill, heat, HeatBarWidth);
-            heatFill.color = shotgun.IsOverheated ? Palette.Red : flashing ? Palette.White : heat > 0.5f ? Palette.Amber : Palette.Yellow;
-            int label = shotgun.IsOverheated ? 3 : shotgun.IsVenting ? 2 : shotgun.AboutToOverheat ? 1 : 0;   // nothing while all is well
+            heatFill.color = redlined ? Palette.Red : flashing ? Palette.White : heat > 0.5f ? Palette.Amber : Palette.Yellow;
+            int label = shotgun.IsVenting ? 2 : redlined ? 3 : shotgun.AboutToRedline ? 1 : 0;   // nothing while all is well
             if (label != shownHeatLabel)
             {
                 shownHeatLabel = label;
-                heatLabel.text = label == 3 ? "OVERHEATED" : label == 2 ? "VENTING" : label == 1 ? "VENT NOW" : "";
+                heatLabel.text = label == 3 ? "REDLINE! VENT OR BASH" : label == 2 ? "VENTING" : label == 1 ? "LAST SHOT" : "";
             }
-            heatLabel.color = shotgun.IsOverheated || flashing ? Palette.Red : Palette.White;
+            heatLabel.color = redlined && !shotgun.IsVenting ? (Mathf.Repeat(Time.unscaledTime * 3f, 1f) < 0.5f ? Palette.Red : Palette.White)
+                            : flashing ? Palette.Red : Palette.White;
         }
 
         void UpdateWaveCounter(float dt)

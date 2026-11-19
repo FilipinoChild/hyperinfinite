@@ -34,7 +34,7 @@ namespace HyperInfinite
             { "LEFT SHIFT", "DASH", "A BURST OF SPEED. RECHARGES IN 1 S" },
             { "LEFT MOUSE", "FIRE", "HOLD TO KEEP FIRING. BUILDS HEAT" },
             { "RIGHT MOUSE", "AIM", "HOLD TO TIGHTEN THE SPREAD" },
-            { "R", "VENT HEAT", "COOLS THE GUN BEFORE IT OVERHEATS" },
+            { "R", "VENT HEAT", "DUMPS ALL HEAT. NOTHING ELSE COOLS IT" },
             { "ESC", "PAUSE", "" },
         };
 

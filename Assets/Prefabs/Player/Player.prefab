@@ -152,10 +152,7 @@ MonoBehaviour:
   holdToRefire: 1
   aimSpread: 2.6
   aimSpeed: 6
-  heatPerShot: 21
-  coolingRate: 22
-  coolingDelay: 0.25
-  overheatLockout: 2.6
+  heatPerShot: 14
   ventRate: 140
   recoilHip: 4.6
   recoilAim: 2.9
@@ -169,7 +166,7 @@ MonoBehaviour:
   onDryFire:
     m_PersistentCalls:
       m_Calls: []
-  onOverheat:
+  onRedline:
     m_PersistentCalls:
       m_Calls: []
   onVent:

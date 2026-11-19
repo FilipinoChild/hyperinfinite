@@ -7,7 +7,7 @@ namespace HyperInfinite
     /// The Energy Blast shotgun gun drawn over the bottom right of the view, 2.5D. It bobs while you run,
     /// trails behind as you turn, leans as you strafe, lifts and drops as you jump and land,
     /// kicks down on every blast, dips while the lever cycles, slides toward the middle as you aim,
-    /// drops and tilts while venting or overheated, and falls out of sight when you go down. Its emitter cells glow with the gun's charge and heat
+    /// drops and tilts while venting or redlined, and falls out of sight when you go down. Its emitter cells glow with the gun's charge and heat
     /// (EnergyBlastShotgun.GlowColor), a pixel burst flashes at the muzzle on every blast, and the muzzle
     /// Transform is kept on the sprite's muzzle so the bolts start from it.
     ///
@@ -187,7 +187,7 @@ namespace HyperInfinite
             bool moving = motor && motor.IsGrounded && motor.Speed > 0.5f;
             bobAmount = Mathf.MoveTowards(bobAmount, moving ? 1f : 0f, dt * 6f);
             if (moving) bobTime += dt * 11f;
-            bool lowered = shotgun.IsOverheated || shotgun.IsVenting;
+            bool lowered = shotgun.IsRedlined || shotgun.IsVenting;
             down = Mathf.MoveTowards(down, lowered ? 1f : 0f, dt * 6f);
             dropped = Mathf.MoveTowards(dropped, health && health.IsDead ? 1f : 0f, dt * 3f);   // out of sight while you're down
             float aim = Mathf.SmoothStep(0f, 1f, shotgun.AimBlend);
@@ -219,7 +219,7 @@ namespace HyperInfinite
             // The prototype tips it back (counterclockwise) for each of these: a positive angle in UI space.
             gun.localRotation = Quaternion.Euler(0f, 0f, kickPixels / px * 0.12f + lever * 10f + down * 14f - lean);
 
-            Color tint = shotgun.IsOverheated ? new Color(1f, 0.72f, 0.6f) : Color.Lerp(Color.white, new Color(1f, 0.93f, 0.86f), shotgun.Heat01);
+            Color tint = shotgun.IsRedlined ? new Color(1f, 0.72f, 0.6f) : Color.Lerp(Color.white, new Color(1f, 0.93f, 0.86f), shotgun.Heat01);
             body.color = tint;
             if (glow)
             {

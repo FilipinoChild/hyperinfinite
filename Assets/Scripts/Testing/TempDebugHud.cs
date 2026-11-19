@@ -148,7 +148,7 @@ namespace HyperInfinite
         {
             if (!shotgun) return;
             cursorY += 6f;
-            string state = shotgun.IsOverheated ? $"<color=#ff5a3c>OVERHEATED {shotgun.OverheatRemaining:0.0} s</color>"
+            string state = shotgun.IsRedlined ? "<color=#ff5a3c>REDLINED</color>"
                          : shotgun.IsVenting ? "<color=#ffb347>venting</color>"
                          : shotgun.CanFire ? "ready" : "lever cycling";
             string aim = shotgun.IsAiming ? "  ·  <color=#31c8ff>aiming</color>" : "";

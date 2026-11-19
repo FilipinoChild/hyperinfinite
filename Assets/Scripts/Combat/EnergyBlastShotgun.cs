@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 namespace HyperInfinite
 {
@@ -19,9 +20,12 @@ namespace HyperInfinite
     /// from the center of the screen. Every bolt does full damage up close and less further out, so the
     /// gun hits hardest up close. Between blasts the lever has to cycle.
     ///
-    /// Heat is the only resource; there's no ammo. Every blast adds heat and the gun cools when rested.
-    /// Reach 100 and it overheats, locking up for a few seconds. Venting (R) dumps the heat early, but
-    /// you can't fire while it does. Aiming (right mouse) tightens the cone so more bolts land at range.
+    /// Heat is the only resource; there's no ammo. Every blast adds heat, and heat never fades by itself:
+    /// getting rid of it is the player's choice. Reach 100 and the gun redlines. It won't fire again until
+    /// the heat goes, but nothing else is locked. There are two ways out. Venting (R) is safe but wastes
+    /// the heat, and you can't fire while it drains. ShotgunMelee spends it instead: a searing bash burns a
+    /// little, and a heavy bash dumps the lot in one explosion. Aiming (right mouse) tightens the cone so
+    /// more bolts land at range.
     ///
     /// Put this under the camera, next to ShotgunSprite, which draws the gun. Bolts fly from the camera's
     /// center, so they land around the crosshair; the bolts you see start at the emitters so they look
@@ -66,14 +70,8 @@ namespace HyperInfinite
         [SerializeField, Min(0.1f)] float aimSpeed = 6f;
 
         [Header("Heat")]
-        [Tooltip("Heat each blast adds. The gun overheats at 100, so 21 allows four quick blasts and the fifth overheats.")]
-        [SerializeField, Range(1f, 100f)] float heatPerShot = 21f;
-        [Tooltip("Heat lost per second while the gun rests.")]
-        [SerializeField, Min(0f)] float coolingRate = 22f;
-        [Tooltip("Seconds after the lever finishes cycling before resting starts to cool it.")]
-        [SerializeField, Min(0f)] float coolingDelay = 0.25f;
-        [Tooltip("Seconds the gun is locked after overheating while the heat drains away.")]
-        [SerializeField, Min(0f)] float overheatLockout = 2.6f;
+        [Tooltip("Heat each blast adds. Heat never fades by itself, and at 100 the gun redlines, so 14 allows seven blasts and the eighth redlines it.")]
+        [SerializeField, Range(1f, 100f)] float heatPerShot = 14f;
         [Tooltip("Heat dumped per second while venting. You can't fire until the vent finishes.")]
         [SerializeField, Min(1f)] float ventRate = 140f;
 
@@ -86,8 +84,9 @@ namespace HyperInfinite
         [Header("Energy glow (GlowColor)")]
         [Tooltip("Ready to fire and cool.")]
         [SerializeField, ColorUsage(false, true)] Color chargedGlow = new Color(0.3f, 1.5f, 2.4f);
-        [Tooltip("Close to overheating.")]
+        [Tooltip("Close to redlining.")]
         [SerializeField, ColorUsage(false, true)] Color hotGlow = new Color(2.6f, 0.75f, 0.15f);
+        [Tooltip("Redlined.")]
         [SerializeField, ColorUsage(false, true)] Color overheatGlow = new Color(3.5f, 0.25f, 0.08f);
 
         [Header("Effects")]
@@ -97,11 +96,12 @@ namespace HyperInfinite
         [Header("Events (hook sounds up here)")]
         [Tooltip("A blast went off: deep, cracking boom.")]
         public UnityEvent onFire = new UnityEvent();
-        [Tooltip("The trigger was pulled while the gun couldn't fire: overheated or venting.")]
+        [Tooltip("The trigger was pulled while the gun couldn't fire: redlined or venting.")]
         public UnityEvent onDryFire = new UnityEvent();
-        public UnityEvent onOverheat = new UnityEvent();
+        [Tooltip("A blast took the heat to 100: the gun won't fire until it's vented or bashed out.")]
+        [FormerlySerializedAs("onOverheat")] public UnityEvent onRedline = new UnityEvent();
         public UnityEvent onVent = new UnityEvent();
-        [Tooltip("The heat has gone after overheating or venting, and the gun is ready again.")]
+        [Tooltip("The heat has all gone, by venting or a heavy bash, and the gun is ready again.")]
         public UnityEvent onCooled = new UnityEvent();
         [Tooltip("Sent with the kick in degrees, for the camera.")]
         public UnityEvent<float> onRecoil = new UnityEvent<float>();
@@ -116,7 +116,7 @@ namespace HyperInfinite
         }
 
         readonly List<Pending> pending = new List<Pending>(16);
-        float cycleTimer, flash, heat, overheatTimer;
+        float cycleTimer, flash, heat;
         int nextEmitter;
         bool venting;
 
@@ -125,15 +125,16 @@ namespace HyperInfinite
         /// <summary>Half-angle of the bolt cone right now, in degrees: it tightens as the gun comes up to aim.</summary>
         public float Spread => Mathf.Lerp(hipSpread, aimSpread, AimBlend);
         public bool IsCycling => cycleTimer > 0f;
-        public bool IsOverheated => overheatTimer > 0f;
+        /// <summary>At 100 heat: it won't fire until the heat is vented or bashed out.</summary>
+        public bool IsRedlined => heat >= 100f;
         public bool IsVenting => venting;
-        public bool CanFire => !IsCycling && !IsOverheated && !venting;
-        /// <summary>0 cold, 1 about to overheat.</summary>
+        public bool CanFire => !IsCycling && !IsRedlined && !venting;
+        /// <summary>0 cold, 1 redlined.</summary>
         public float Heat01 => heat / 100f;
-        /// <summary>True when the next blast would overheat the gun, so the heat gauge can flash a warning.</summary>
-        public bool AboutToOverheat => !IsOverheated && !venting && heat + heatPerShot >= 100f;
-        /// <summary>Seconds left before an overheated gun works again.</summary>
-        public float OverheatRemaining => Mathf.Max(0f, overheatTimer);
+        /// <summary>Heat right now, 0 to 100.</summary>
+        public float Heat => heat;
+        /// <summary>True when the next blast would redline the gun, so the heat gauge can flash a warning.</summary>
+        public bool AboutToRedline => !IsRedlined && !venting && heat + heatPerShot >= 100f;
         public bool IsAiming { get; private set; }
         /// <summary>0 at the hip, 1 fully aimed.</summary>
         public float AimBlend { get; private set; }
@@ -142,7 +143,7 @@ namespace HyperInfinite
         public float Kick { get; private set; }
         /// <summary>0 to 1 and back while the lever swings through the end of its cycle.</summary>
         public float LeverSwing { get; private set; }
-        /// <summary>The emitters' glow: cyan when charged and cool, amber as heat builds, a red flicker when overheated, dim while recharging.</summary>
+        /// <summary>The emitters' glow: cyan when charged and cool, amber as heat builds, a red flicker when redlined, dim while recharging.</summary>
         public Color GlowColor { get; private set; }
 
         /// <summary>What one bolt does at this distance.</summary>
@@ -167,7 +168,7 @@ namespace HyperInfinite
         {
             float dt = Time.deltaTime;
             cycleTimer -= dt;
-            Cool(dt);
+            Vent(dt);
             if (!controls) return;
 
             IsAiming = controls.AimHeld;
@@ -176,49 +177,60 @@ namespace HyperInfinite
 
             bool trigger = holdToRefire ? controls.FireHeld : controls.FirePressed;
             if (trigger && CanFire) Fire();
-            else if (controls.FirePressed && (IsOverheated || venting)) onDryFire.Invoke();
+            else if (controls.FirePressed && (IsRedlined || venting)) onDryFire.Invoke();
         }
 
-        /// <summary>Starts dumping heat. Returns false if there's nothing to vent, or it's overheated or already venting.</summary>
+        /// <summary>Starts dumping heat, redlined or not. Returns false if there's nothing to vent or it's already venting.</summary>
         public bool TryVent()
         {
-            if (heat <= 0f || IsOverheated || venting) return false;
+            if (heat <= 0f || venting) return false;
             venting = true;
             onVent.Invoke();
             return true;
+        }
+
+        /// <summary>
+        /// Takes up to <paramref name="amount"/> heat out of the gun and returns how much it took, for a searing
+        /// bash. Spending heat brings a redlined gun back.
+        /// </summary>
+        public float SpendHeat(float amount)
+        {
+            float spent = Mathf.Clamp(amount, 0f, heat);
+            if (spent <= 0f) return 0f;
+            heat -= spent;
+            if (heat <= 0f) Emptied();
+            return spent;
+        }
+
+        /// <summary>Takes all the heat out at once and returns how much there was, for a heavy bash. Stops a vent under way.</summary>
+        public float DumpHeat()
+        {
+            float dumped = heat;
+            if (dumped > 0f) Emptied();
+            return dumped;
         }
 
         /// <summary>Cold and ready to fire at once, whatever it was doing: for respawns.</summary>
         public void CoolCompletely()
         {
             heat = 0f;
-            overheatTimer = 0f;
             cycleTimer = 0f;
             venting = false;
         }
 
-        void Cool(float dt)
+        /// <summary>Heat only goes down while venting: nothing cools the gun by itself.</summary>
+        void Vent(float dt)
         {
-            if (overheatTimer > 0f)
-            {
-                overheatTimer -= dt;
-                heat = overheatLockout > 0f ? 100f * Mathf.Clamp01(overheatTimer / overheatLockout) : 0f;   // drains as you wait
-                if (overheatTimer <= 0f)
-                {
-                    heat = 0f;
-                    onCooled.Invoke();
-                }
-            }
-            else if (venting)
-            {
-                heat = Mathf.Max(0f, heat - ventRate * dt);
-                if (heat <= 0f)
-                {
-                    venting = false;
-                    onCooled.Invoke();
-                }
-            }
-            else if (cycleTimer < -coolingDelay) heat = Mathf.Max(0f, heat - coolingRate * dt);
+            if (!venting) return;
+            heat -= ventRate * dt;
+            if (heat <= 0f) Emptied();
+        }
+
+        void Emptied()
+        {
+            heat = 0f;
+            venting = false;
+            onCooled.Invoke();
         }
 
         void LateUpdate()
@@ -232,8 +244,7 @@ namespace HyperInfinite
             Kick = 1f;
             flash = flashIntensity;
             heat = Mathf.Min(100f, heat + heatPerShot);
-            bool overheatedNow = heat >= 100f;   // the blast that overheats still goes off
-            if (overheatedNow) overheatTimer = overheatLockout;
+            bool redlinedNow = heat >= 100f;   // the blast that redlines still goes off
 
             Physics.SyncTransforms();   // targets moved this frame; make sure the rays see where they are now
             Transform shooter = controls ? controls.transform : transform.root;
@@ -283,7 +294,7 @@ namespace HyperInfinite
             LastShot = report;
             onFire.Invoke();
             onRecoil.Invoke(Mathf.Lerp(recoilHip, recoilAim, AimBlend));
-            if (overheatedNow) onOverheat.Invoke();
+            if (redlinedNow) onRedline.Invoke();
         }
 
         /// <summary>The emitter tip the next bolt starts from, taking turns.</summary>
@@ -317,12 +328,12 @@ namespace HyperInfinite
 
         /// <summary>
         /// The emitters glow cyan when the gun is charged and cool. A blast drains them and they charge back
-        /// up while the lever cycles. As heat builds they run amber, and they flicker red while overheated.
+        /// up while the lever cycles. As heat builds they run amber, and they flicker red while redlined.
         /// </summary>
         void Glow()
         {
             Color glow;
-            if (IsOverheated) glow = overheatGlow * (0.7f + 0.3f * Mathf.Sin(Time.time * 40f));   // flickers while locked
+            if (IsRedlined) glow = overheatGlow * (0.7f + 0.3f * Mathf.Sin(Time.time * 40f));   // flickers until the heat goes
             else
             {
                 float h = Heat01;
