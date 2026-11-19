@@ -9,8 +9,8 @@ namespace HyperInfinite
     /// heat. Shooting builds heat, and heat never fades by itself, so the melee is how the player cashes it in.
     ///
     /// Tap Melee (Q) to bash the nearest thing in front. With 10 or more heat in the gun it sears, spending
-    /// that heat for extra damage and a stagger, and it brands what it hits. Branded enemies smoulder with
-    /// embers for a few seconds. Bash a Scuttler while it crouches to bite and the bite is countered: it takes
+    /// that heat for extra damage and a stagger, and it brands what it hits. A branded enemy carries a pixel
+    /// flame over its head and smoulders with embers for a few seconds; the flame blinks white as it runs out. Bash a Scuttler while it crouches to bite and the bite is countered: it takes
     /// extra damage and is thrown clear.
     ///
     /// Hold Melee to charge a heavy bash (you move slower while charging), and let go to throw it: you lunge
@@ -20,7 +20,7 @@ namespace HyperInfinite
     /// shield each other from it; only walls and rocks do. From a redlined gun it overloads, hitting harder and
     /// wider still. A full gauge kicks you back a little as it goes off. Heat bolts fan out across the
     /// cone, a shockwave sweeps the floor, and every enemy hit flares. Every brand within reach bursts at the
-    /// same moment, splashing whatever is near it. If the Hive
+    /// same moment, each linked to the gun by a bolt of heat, splashing whatever is near it. If the Hive
     /// Mother is winding up a slam and the bash carries enough heat, the slam is cancelled. Aim at the floor to
     /// blast-jump: the explosion goes off underfoot and throws you up, higher the hotter it was.
     ///
@@ -134,7 +134,7 @@ namespace HyperInfinite
         {
             public Collider collider;
             public IDamageable target;
-            public float until, nextEmber;
+            public float until, nextEmber, since;
         }
 
         const int MaxBrands = 12;
@@ -142,6 +142,12 @@ namespace HyperInfinite
         static readonly RaycastHit[] sight = new RaycastHit[16];
 
         readonly Brand[] brands = new Brand[MaxBrands];
+        // The flame over each brand: one mark per slot, made once and reused.
+        readonly Transform[] marks = new Transform[MaxBrands];
+        readonly SpriteRenderer[] markFlames = new SpriteRenderer[MaxBrands], markCores = new SpriteRenderer[MaxBrands];
+        readonly bool[] markShown = new bool[MaxBrands];
+        GameObject markHolder;
+        Material markMaterial;
         readonly List<IDamageable> struck = new List<IDamageable>(16);
         readonly List<Collider> struckBy = new List<Collider>(16);
         EnergyBlastShotgun shotgun;
@@ -184,6 +190,47 @@ namespace HyperInfinite
             var eyes = GetComponentInParent<Camera>();
             view = eyes ? eyes.transform : transform;
             player = controls ? controls.transform : transform.root;
+            BuildMarks();
+        }
+
+        void OnDestroy()
+        {
+            if (markHolder) Destroy(markHolder);
+            if (markMaterial) Destroy(markMaterial);
+        }
+
+        /// <summary>
+        /// The brand flames: pixel sprites facing the camera with a black outline, like the creatures. They use the
+        /// same unlit sprite shader as PixelFx, so they glow evenly in any light.
+        /// </summary>
+        void BuildMarks()
+        {
+            Shader shader = Shader.Find("Sprites/Default");
+            if (!shader) return;   // no flames, but brands still smoulder and burst
+            markMaterial = new Material(shader) { name = "Brand Marks" };
+            markHolder = new GameObject("Brand Marks");
+            for (int i = 0; i < MaxBrands; i++)
+            {
+                Transform mark = new GameObject("Brand Mark").transform;
+                mark.SetParent(markHolder.transform, false);
+                MarkLayer(mark, "Outline", PixelArt.BrandOutline, Palette.Ink, 1, markMaterial);
+                markFlames[i] = MarkLayer(mark, "Flame", PixelArt.BrandFlame, Palette.Amber, 2, markMaterial);
+                markCores[i] = MarkLayer(mark, "Core", PixelArt.BrandCore, Palette.Yellow, 3, markMaterial);
+                mark.gameObject.SetActive(false);
+                marks[i] = mark;
+            }
+        }
+
+        static SpriteRenderer MarkLayer(Transform mark, string layerName, Sprite art, Color color, int order, Material material)
+        {
+            var layer = new GameObject(layerName);
+            layer.transform.SetParent(mark, false);
+            var sprite = layer.AddComponent<SpriteRenderer>();
+            sprite.sharedMaterial = material;
+            sprite.sprite = art;
+            sprite.color = color;
+            sprite.sortingOrder = order;   // outline, flame, core, back to front
+            return sprite;
         }
 
         void Update()
@@ -474,14 +521,18 @@ namespace HyperInfinite
                     slot = i;
                 }
             }
-            brands[slot] = new Brand { collider = c, target = target, until = Time.time + brandTime, nextEmber = 0f };
+            brands[slot] = new Brand { collider = c, target = target, until = Time.time + brandTime, nextEmber = 0f, since = Time.time };
         }
 
-        /// <summary>Brands smoulder: embers rise off each branded enemy until it fades or the enemy is gone.</summary>
+        /// <summary>
+        /// Brands smoulder: a flame floats over each branded enemy, flickering in whole frames and blinking white
+        /// in its last second and a half, and embers rise off it, until the brand fades or the enemy is gone.
+        /// </summary>
         void TendBrands()
         {
             int count = 0;
             float now = Time.time;
+            Quaternion facing = view ? view.rotation : Quaternion.identity;
             for (int i = 0; i < MaxBrands; i++)
             {
                 ref Brand b = ref brands[i];
@@ -489,12 +540,25 @@ namespace HyperInfinite
                 {
                     b.collider = null;
                     b.target = null;
+                    ShowMark(i, false);
                     continue;
                 }
                 count++;
+                Bounds bounds = b.collider.bounds;
+                if (markHolder)
+                {
+                    ShowMark(i, true);
+                    float age = now - b.since;
+                    int beat = (int)(now * 6f) + i;   // each flame flickers on its own beat
+                    bool fading = b.until - now < 1.5f && Mathf.Repeat(now * 8f, 1f) < 0.5f;
+                    marks[i].SetPositionAndRotation(new Vector3(bounds.center.x, bounds.max.y + 0.45f, bounds.center.z), facing);
+                    marks[i].localScale = Vector3.one * (age < 0.1f ? 2.1f : beat % 2 == 0 ? 1.5f : 1.6f);   // pops on, then flickers
+                    markFlames[i].color = age < 0.1f || fading ? Palette.White : beat % 3 == 0 ? Palette.Red : Palette.Amber;
+                    markCores[i].color = fading ? Palette.Amber : Palette.Yellow;
+                }
+
                 if (now < b.nextEmber) continue;
                 b.nextEmber = now + 0.12f;
-                Bounds bounds = b.collider.bounds;
                 Vector3 at = bounds.center + new Vector3(Random.Range(-0.5f, 0.5f) * bounds.extents.x, bounds.extents.y * 0.6f,
                                                          Random.Range(-0.5f, 0.5f) * bounds.extents.z);
                 PixelFx.Mote(at, new Vector3(0f, Random.Range(0.7f, 1.1f), 0f), (i + (int)(now * 8f)) % 3 == 0 ? Palette.Red : Palette.Amber,
@@ -503,12 +567,20 @@ namespace HyperInfinite
             BrandCount = count;
         }
 
+        void ShowMark(int i, bool show)
+        {
+            if (markShown[i] == show || !marks[i]) return;
+            markShown[i] = show;
+            marks[i].gameObject.SetActive(show);
+        }
+
         /// <summary>Every brand in reach bursts, hurting its enemy and splashing anything near it. Returns how many burst.</summary>
         int Detonate(float heat)
         {
             if (BrandCount == 0) return 0;
             float damage = brandDamage + brandHeatDamage * heat;
             Vector3 me = player.position;
+            Vector3 muzzle = view.position + view.forward * 0.9f - view.up * 0.15f;
             int burst = 0;
             for (int b = 0; b < MaxBrands; b++)
             {
@@ -518,7 +590,9 @@ namespace HyperInfinite
                 if ((center - me).sqrMagnitude > brandReach * brandReach) continue;   // out of reach: it keeps smouldering
                 brands[b].collider = null;
                 brands[b].target = null;
+                ShowMark(b, false);
                 burst++;
+                PixelFx.Bolt(muzzle, center, Palette.Amber, 0.07f, 0.16f);   // the heat races from the gun to the brand
 
                 Gather(center, brandRadius, center);
                 for (int i = 0; i < struck.Count; i++)
