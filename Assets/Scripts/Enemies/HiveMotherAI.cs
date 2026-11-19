@@ -24,6 +24,8 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float slamTriggerRange = 6f;
         [Tooltip("The slam hits everything within this many meters.")]
         [SerializeField, Min(0f)] float slamRadius = 7f;
+        [Tooltip("How far above or below her the slam still reaches, in meters. It climbs steps and low ledges; anything higher is out of reach.")]
+        [SerializeField, Min(0f)] float slamHeight = 2.5f;
         [SerializeField, Min(0f)] float slamDamage = 25f;
         [Tooltip("Seconds of warning before the slam lands. This is the player's chance to escape.")]
         [SerializeField, Min(0f)] float slamWindup = 1f;
@@ -165,9 +167,12 @@ namespace HyperInfinite
             PixelFx.Ring(transform.position, slamRadius * 0.55f, Palette.Yellow, 24, 0.2f, 0.24f);
             PixelFx.Burst(transform.position + Vector3.up * 0.3f, Palette.Navy, Palette.White, 24, 7f, 0.5f, 0.2f);
 
-            // The slam hits along the ground, so a player in the air dodges it
-            bool inRing = FlatDistanceToPlayer() <= slamRadius;
-            bool airborne = player.position.y > transform.position.y + 0.6f;
+            // The slam travels along the ground, so a player in the air dodges it. Standing on a
+            // step or a low ledge isn't in the air: what counts is ground close under their feet.
+            bool inRing = FlatDistanceToPlayer() <= slamRadius
+                          && Mathf.Abs(player.position.y - transform.position.y) <= slamHeight;
+            bool airborne = !Physics.Raycast(player.position + Vector3.up * 0.3f, Vector3.down, 0.9f,
+                                             Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
             if (inRing && !airborne && playerHealth != null)
             {
                 playerHealth.TakeDamage(new DamageInfo
