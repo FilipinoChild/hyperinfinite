@@ -11,8 +11,9 @@ namespace HyperInfinite
     /// away; it blinks when health is low, and the whole panel jolts when you're hit.
     ///
     /// In the middle sits the crosshair. Its gap shows the shotgun's spread, so it tightens as you aim,
-    /// and red marks flash at its corners when a blast lands. Below it is the shotgun's heat gauge: amber
-    /// as heat builds, flashing when the next blast would redline the gun, and red once it has. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
+    /// and red marks flash at its corners when a blast or a bash lands. Below it is the shotgun's heat gauge:
+    /// amber as heat builds, flashing when the next blast would redline the gun, and red once it has. While a
+    /// heavy bash charges, the gauge strobes (it's how hard the bash will hit) and RELEASE TO BASH shows. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
     /// fills up, flashes when the dash is ready and then gets out of the way, so you can tell without
     /// looking down. LAST SHOT, VENTING or REDLINE! VENT OR BASH shows below both, only when there's something to do.
     /// Above the crosshair, WEBBED! SHOOT THE WEB blinks while a Web Trap has hold of you.
@@ -49,6 +50,7 @@ namespace HyperInfinite
         PlayerRespawn respawn;
         PlayerMotor motor;
         EnergyBlastShotgun shotgun;
+        ShotgunMelee melee;
         Camera view;
         Canvas canvas;
         HurtOverlay hurt;
@@ -89,6 +91,7 @@ namespace HyperInfinite
             if (!respawn && health) respawn = gameObject.AddComponent<PlayerRespawn>();   // an older Player prefab without one
             motor = GetComponent<PlayerMotor>();
             shotgun = GetComponentInChildren<EnergyBlastShotgun>();
+            melee = GetComponentInChildren<ShotgunMelee>();
             view = GetComponentInChildren<Camera>();
             Build();
         }
@@ -319,7 +322,8 @@ namespace HyperInfinite
                 ticks[2].anchoredPosition = new Vector2(-reach, 0f);
                 ticks[3].anchoredPosition = new Vector2(reach, 0f);
             }
-            bool hit = shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f;
+            bool hit = (shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f)
+                       || (melee && Time.time - melee.LastHitTime < 0.18f);
             if (hitMarker.activeSelf != hit) hitMarker.SetActive(hit);
             UpdateCrosshairDash();
 
@@ -360,15 +364,19 @@ namespace HyperInfinite
             float heat = Mathf.Clamp01(shotgun.Heat01);
             bool flashing = shotgun.AboutToRedline && Mathf.Repeat(Time.unscaledTime * 6f, 1f) < 0.5f;
             bool redlined = shotgun.IsRedlined;
+            bool charging = melee && melee.IsCharging;
+            bool strobe = Mathf.Repeat(Time.unscaledTime * 8f, 1f) < 0.5f;
             UiKit.SetFill(heatFill, heat, HeatBarWidth);
-            heatFill.color = redlined ? Palette.Red : flashing ? Palette.White : heat > 0.5f ? Palette.Amber : Palette.Yellow;
-            int label = shotgun.IsVenting ? 2 : redlined ? 3 : shotgun.AboutToRedline ? 1 : 0;   // nothing while all is well
+            heatFill.color = charging ? (strobe ? Palette.White : Palette.Amber)
+                           : redlined ? Palette.Red : flashing ? Palette.White : heat > 0.5f ? Palette.Amber : Palette.Yellow;
+            int label = charging ? 4 : shotgun.IsVenting ? 2 : redlined ? 3 : shotgun.AboutToRedline ? 1 : 0;   // nothing while all is well
             if (label != shownHeatLabel)
             {
                 shownHeatLabel = label;
-                heatLabel.text = label == 3 ? "REDLINE! VENT OR BASH" : label == 2 ? "VENTING" : label == 1 ? "LAST SHOT" : "";
+                heatLabel.text = label == 4 ? "RELEASE TO BASH" : label == 3 ? "REDLINE! VENT OR BASH" : label == 2 ? "VENTING" : label == 1 ? "LAST SHOT" : "";
             }
-            heatLabel.color = redlined && !shotgun.IsVenting ? (Mathf.Repeat(Time.unscaledTime * 3f, 1f) < 0.5f ? Palette.Red : Palette.White)
+            heatLabel.color = charging ? (strobe ? Palette.White : Palette.Amber)
+                            : redlined && !shotgun.IsVenting ? (Mathf.Repeat(Time.unscaledTime * 3f, 1f) < 0.5f ? Palette.Red : Palette.White)
                             : flashing ? Palette.Red : Palette.White;
         }
 

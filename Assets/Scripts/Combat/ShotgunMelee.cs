@@ -142,6 +142,10 @@ namespace HyperInfinite
         /// <summary>When the last heavy bash went off, and its power: 0 cold, 1 a full gauge.</summary>
         public float LastHeavyTime { get; private set; } = -100f;
         public float LastHeavyPower { get; private set; }
+        /// <summary>When a bash or heavy bash last hurt something.</summary>
+        public float LastHitTime { get; private set; } = -100f;
+        /// <summary>True if the last bash connected.</summary>
+        public bool LastBashLanded => LastHitTime >= LastBashTime;
         /// <summary>How many enemies are branded right now.</summary>
         public int BrandCount { get; private set; }
 
@@ -457,6 +461,7 @@ namespace HyperInfinite
 
         void Hit(IDamageable target, float amount, Vector3 point, Vector3 direction, float distance)
         {
+            LastHitTime = Time.time;
             target.TakeDamage(new DamageInfo
             {
                 Amount = amount, Kind = DamageKind.Melee, Point = point, Direction = direction.normalized,
