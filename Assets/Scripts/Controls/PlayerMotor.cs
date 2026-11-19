@@ -8,6 +8,9 @@ namespace HyperInfinite
     /// the player with Unity's CharacterController. It reads PlayerControls and moves the way this
     /// object faces; the camera turns it. The feel numbers are the web prototype's, so tune them
     /// in the Inspector.
+    ///
+    /// Sticky ground, such as a Web Trap, slows all of it down through Snare: while snared the player
+    /// runs and dashes at a fraction of their speed and can't jump.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
     [DefaultExecutionOrder(-20)]   // after input and the camera's turn, before shooting
@@ -61,6 +64,7 @@ namespace HyperInfinite
         CharacterController body;
         Vector3 velocity, dashDirection;
         float coyoteTimer, jumpBufferTimer, dashTimer, dashCooldownTimer, airTime;
+        float snareScale = 1f, snaredUntil = -1f;
         int airJumpsUsed;
 
         public Vector3 Velocity => velocity;
@@ -74,6 +78,8 @@ namespace HyperInfinite
         public float DashCooldownLeft => Mathf.Max(0f, dashCooldownTimer);
         public int AirJumpsLeft => Mathf.Max(0, airJumps - airJumpsUsed);
         public float RunSpeed => runSpeed;
+        /// <summary>True while something sticky has hold of the player: slowed, and unable to jump.</summary>
+        public bool IsSnared => Time.time < snaredUntil;
 
         void Awake()
         {
@@ -93,15 +99,20 @@ namespace HyperInfinite
             jumpBufferTimer = jumpPressed ? jumpBuffer : jumpBufferTimer - dt;
             coyoteTimer = IsGrounded ? coyoteTime : coyoteTimer - dt;
 
+            // Snared: everything across the ground happens at a fraction of its speed, and there's no jumping.
+            bool snared = IsSnared;
+            float pace = snared ? snareScale : 1f;
+            if (snared) jumpBufferTimer = 0f;
+
             if (controls && controls.DashPressed && dashCooldownTimer <= 0f) StartDash(wish);
-            bool jumped = (jumpPressed || jumpBufferTimer > 0f) && TryJump(jumpPressed);
+            bool jumped = !snared && (jumpPressed || jumpBufferTimer > 0f) && TryJump(jumpPressed);
 
             // Across the ground: the dash overrides running while it lasts.
             if (dashTimer > 0f)
             {
                 dashTimer -= dt;
-                velocity.x = dashDirection.x * dashSpeed;
-                velocity.z = dashDirection.z * dashSpeed;
+                velocity.x = dashDirection.x * dashSpeed * pace;
+                velocity.z = dashDirection.z * dashSpeed * pace;
                 if (dashTimer <= 0f)
                 {
                     velocity.x *= dashCarry;
@@ -111,8 +122,8 @@ namespace HyperInfinite
             else
             {
                 float k = 1f - Mathf.Exp(-(IsGrounded ? groundAcceleration : airAcceleration) * dt);
-                velocity.x += (wish.x * runSpeed - velocity.x) * k;
-                velocity.z += (wish.z * runSpeed - velocity.z) * k;
+                velocity.x += (wish.x * runSpeed * pace - velocity.x) * k;
+                velocity.z += (wish.z * runSpeed * pace - velocity.z) * k;
             }
 
             // Up and down.
@@ -150,8 +161,22 @@ namespace HyperInfinite
             body.enabled = true;
             velocity = Vector3.zero;
             dashTimer = dashCooldownTimer = coyoteTimer = jumpBufferTimer = airTime = 0f;
+            snaredUntil = -1f;
             airJumpsUsed = 0;
             IsGrounded = false;
+        }
+
+        /// <summary>
+        /// Sticky ground calls this every frame the player stands in it. <paramref name="speedScale"/> is the
+        /// share of their speed they keep (0.35 is 35%); they also can't jump. It wears off a moment after
+        /// the calls stop, so whatever is holding them only has to stop asking. If two things snare at
+        /// once, the slower one wins.
+        /// </summary>
+        public void Snare(float speedScale, float holdFor = 0.1f)
+        {
+            speedScale = Mathf.Clamp01(speedScale);
+            snareScale = IsSnared ? Mathf.Min(snareScale, speedScale) : speedScale;
+            snaredUntil = Mathf.Max(snaredUntil, Time.time + holdFor);
         }
 
         /// <summary>Knock-back from blasts, in meters per second. An upward push lifts you off the ground.</summary>

@@ -16,6 +16,7 @@ namespace HyperInfinite
     /// locked. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
     /// fills up, flashes when the dash is ready and then gets out of the way, so you can tell without
     /// looking down. VENT NOW, VENTING or OVERHEATED shows below both, only when there's something to do.
+    /// Above the crosshair, WEBBED! SHOOT THE WEB blinks while a Web Trap has hold of you.
     ///
     /// Top left is the wave counter, for scenes with a ScuttlerSpawner: GET READY before the first wave,
     /// then the wave number with how many Scuttlers are left, a countdown between waves, and ALL CLEAR at
@@ -65,7 +66,7 @@ namespace HyperInfinite
         GameObject crosshair, hitMarker, heatGauge, dashGauge;
         readonly RectTransform[] ticks = new RectTransform[4];
         Image heatFill, crosshairDashFill;
-        Text heatLabel;
+        Text heatLabel, snarePrompt;
         float shownGap = -1f, dashReadyAt = -10f;
         bool dashWasReady = true;
         int shownHeatLabel = -1;
@@ -200,6 +201,11 @@ namespace HyperInfinite
             crosshairDashFill = UiKit.Fill("Dash", dashTrack, Palette.Steel);
             UiKit.Border(dashTrack, Palette.Ink);
             dashGauge.SetActive(false);
+
+            // Shown while something sticky has hold of the player, just above the crosshair.
+            snarePrompt = UiKit.Label("Snare Prompt", root, Middle, Middle, new Vector2(0f, 120f), new Vector2(420f, 24f), "WEBBED! SHOOT THE WEB", 16,
+                                      TextAnchor.MiddleCenter, Palette.White);
+            snarePrompt.gameObject.SetActive(false);
         }
 
         /// <summary>The heat gauge, just below the crosshair: a slim bar marked in fifths, and a warning under it when needed.</summary>
@@ -310,6 +316,10 @@ namespace HyperInfinite
             bool hit = shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f;
             if (hitMarker.activeSelf != hit) hitMarker.SetActive(hit);
             UpdateCrosshairDash();
+
+            bool snared = motor && motor.IsSnared;
+            if (snarePrompt.gameObject.activeSelf != snared) snarePrompt.gameObject.SetActive(snared);
+            if (snared) snarePrompt.color = Mathf.Repeat(Time.unscaledTime * 3f, 1f) < 0.5f ? Palette.White : Palette.Cyan;   // blinking
         }
 
         /// <summary>
