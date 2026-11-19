@@ -77,6 +77,24 @@ namespace HyperInfinite
             }
         }
 
+        /// <summary>
+        /// Chunks blown out in a cone along <paramref name="direction"/>, up to <paramref name="halfAngle"/> degrees
+        /// off it, in two mixed colors: a directed blast, such as a heavy bash.
+        /// </summary>
+        public static void Cone(Vector3 point, Vector3 direction, float halfAngle, Color color, Color accent, int count,
+                                float speed = 12f, float life = 0.3f, float size = 0.14f)
+        {
+            PixelFx fx = Get();
+            if (!fx) return;
+            direction.Normalize();
+            float spread = Mathf.Tan(Mathf.Clamp(halfAngle, 0f, 80f) * Mathf.Deg2Rad);
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 velocity = (direction + Random.insideUnitSphere * spread).normalized * (speed * Random.Range(0.45f, 1f));
+                fx.Spawn(KindChunk, point, velocity, i % 3 == 2 ? accent : color, size * Random.Range(0.6f, 1f), life * Random.Range(0.6f, 1f), 4f);
+            }
+        }
+
         /// <summary>A ring of squares spreading across the ground from <paramref name="center"/> out to <paramref name="radius"/>: a shockwave.</summary>
         public static void Ring(Vector3 center, float radius, Color color, int count = 28, float life = 0.35f, float size = 0.22f)
         {

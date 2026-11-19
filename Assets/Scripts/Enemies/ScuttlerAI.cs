@@ -72,6 +72,9 @@ namespace HyperInfinite
         float windupTimer;
         bool windingUp;              // true during the warning before a bite
 
+        /// <summary>True while it crouches and flashes red before a bite: the moment a well-timed bash counters it.</summary>
+        public bool IsWindingUp => windingUp;
+
         void Awake()
         {
             agent = GetComponent<NavMeshAgent>();

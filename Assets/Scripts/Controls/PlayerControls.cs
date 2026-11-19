@@ -37,7 +37,7 @@ namespace HyperInfinite
         [SerializeField] bool invertY;
 
         [Header("Melee")]
-        [Tooltip("Holding Melee at least this long, in seconds, makes a heavy punch instead of a quick hit.")]
+        [Tooltip("Holding Melee at least this long, in seconds, makes a heavy bash instead of a quick one.")]
         [SerializeField, Range(0.1f, 1f)] float heavyMeleeHoldTime = 0.3f;
 
         [Header("Cursor")]
@@ -57,11 +57,11 @@ namespace HyperInfinite
         public bool VentPressed { get; private set; }
         /// <summary>True on the frame Melee is let go after a tap: a quick hit.</summary>
         public bool QuickMeleePressed { get; private set; }
-        /// <summary>True on the frame Melee is let go after a hold: the heavy punch lands.</summary>
+        /// <summary>True on the frame Melee is let go after a hold: the heavy bash lands.</summary>
         public bool HeavyMeleeReleased { get; private set; }
-        /// <summary>Seconds Melee has been held so far, while it's down; 0 otherwise. A heavy punch charges up with it.</summary>
+        /// <summary>Seconds Melee has been held so far, while it's down; 0 otherwise. A heavy bash charges up with it.</summary>
         public float MeleeHoldTime { get; private set; }
-        /// <summary>True while Melee has been held long enough that letting go throws a heavy punch.</summary>
+        /// <summary>True while Melee has been held long enough that letting go throws a heavy bash.</summary>
         public bool HeavyMeleeCharging => meleeDown && MeleeHoldTime >= heavyMeleeHoldTime;
         /// <summary>True on the frame Pause was pressed. It still reports while gameplay input is off, so a menu can close itself.</summary>
         public bool PausePressed { get; private set; }
@@ -215,7 +215,7 @@ namespace HyperInfinite
         }
 
         /// <summary>
-        /// The melee: tap Q for a quick hit, or hold it to charge a heavy punch that lands when you let
+        /// The melee: tap Q for a quick bash, or hold it to charge a heavy bash that lands when you let
         /// go. Both are decided on release, so one press never gives both.
         /// </summary>
         void ReadMelee()

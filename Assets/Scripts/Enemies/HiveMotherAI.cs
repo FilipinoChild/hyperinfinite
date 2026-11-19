@@ -9,6 +9,9 @@ namespace HyperInfinite
     /// The slam is telegraphed: the red ring shows where it will land and blinks faster and
     /// faster, rings of sparks sweep out to its edge, and she rears up and flashes red. When it
     /// lands she drops flat and a shockwave bursts across the ring.
+    ///
+    /// A hard enough hit while she winds up (Stagger) knocks her off balance: the slam is cancelled,
+    /// and she reels for a moment before she can walk or slam again.
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Health))]
     public class HiveMotherAI : MonoBehaviour
@@ -51,6 +54,9 @@ namespace HyperInfinite
         float stateTimer, slamCooldownTimer, summonTimer, repathTimer;
         FaceCamera sprite;           // shows her sprite: it rears up, flashes and drops flat
         bool secondPulse;            // the second ring of sparks has gone out this wind-up
+
+        /// <summary>True while she rears up before a slam, with the red ring blinking.</summary>
+        public bool IsWindingUp => state == State.WindingUp;
 
         void Awake()
         {
@@ -186,6 +192,29 @@ namespace HyperInfinite
                     Source = gameObject,
                 });
             }
+        }
+
+        /// <summary>
+        /// Knocks her off balance if she's winding up a slam: the slam is called off and she reels for
+        /// <paramref name="seconds"/>, then has to wait out the slam's cooldown before trying again.
+        /// Returns false, doing nothing, at any other time.
+        /// </summary>
+        public bool Stagger(float seconds)
+        {
+            if (state != State.WindingUp) return false;
+            if (slamWarning) slamWarning.SetActive(false);
+            state = State.Recovering;
+            stateTimer = Mathf.Max(seconds, slamRecovery);
+            slamCooldownTimer = slamCooldown + stateTimer;
+            if (sprite)
+            {
+                sprite.Tint = Color.white;
+                sprite.Squash = -0.15f;   // knocked down a little
+            }
+            Vector3 middle = transform.position + Vector3.up * 1.2f;
+            PixelFx.Burst(middle, Palette.Yellow, Palette.White, 18, 6f, 0.4f, 0.16f);
+            PixelFx.Ring(transform.position, 2.5f, Palette.Yellow, 20, 0.3f, 0.2f);
+            return true;
         }
 
         void Summon()

@@ -213,6 +213,7 @@ namespace HyperInfinite
             var sprite = gun.AddComponent<ShotgunSprite>();
             Wire(sprite, "sprite", gunSprite);
             Wire(sprite, "muzzle", muzzle);
+            gun.AddComponent<ShotgunMelee>();   // the bash and heavy bash, spending the gun's heat
             return shotgun;
         }
 
