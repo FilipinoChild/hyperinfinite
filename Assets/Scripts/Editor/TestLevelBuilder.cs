@@ -483,7 +483,8 @@ namespace HyperInfinite
 
         /// <summary>
         /// East of the spawn: eggs in the open, behind a low wall, up on a ledge, and three clusters close
-        /// together. They grow back after 12 seconds here, so they can be tested again and again.
+        /// together, with two Web Traps between them. Eggs and webs grow back after 12 seconds here, so
+        /// they can be tested again and again.
         /// </summary>
         static void BuildEggGarden(Kit kit, Transform level, GameObject eggsPrefab)
         {
@@ -500,6 +501,20 @@ namespace HyperInfinite
             Eggs(eggsPrefab, garden, "Eggs: Cluster C", new Vector3(20.5f, 0f, 22f));
             Block(kit, garden, "Pillar", new Vector3(17f, 1.5f, 4f), new Vector3(1.2f, 3f, 1.2f));
             Block(kit, garden, "Pillar", new Vector3(28f, 1.5f, 28f), new Vector3(1.2f, 3f, 1.2f));
+
+            // The Web Trap prefab is an ordinary asset, not one this builds. Without it, the garden just has no webs.
+            var webPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabFolder + "/Hazards/Web Trap.prefab");
+            if (!webPrefab) return;
+            Web(webPrefab, garden, "Web Trap: Open Ground", new Vector3(26f, 0f, -9f));
+            Web(webPrefab, garden, "Web Trap: By the Ledge", new Vector3(31.5f, 0f, 8.5f));
+        }
+
+        static void Web(GameObject prefab, Transform parent, string name, Vector3 position)
+        {
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            go.name = name;
+            go.transform.localPosition = position;
+            WireFloat(go.GetComponent<WebTrap>(), "regrowTime", 12f);
         }
 
         static void Eggs(GameObject prefab, Transform parent, string name, Vector3 position)
