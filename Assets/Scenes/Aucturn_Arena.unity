@@ -17,7 +17,7 @@ RenderSettings:
   m_Fog: 1
   m_FogColor: {r: 0.24, g: 0.13, b: 0.24, a: 1}
   m_FogMode: 3
-  m_FogDensity: 0.027
+  m_FogDensity: 0.021
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
   m_AmbientSkyColor: {r: 0.4, g: 0.28, b: 0.38, a: 1}
@@ -612,8 +612,8 @@ Transform:
   m_GameObject: {fileID: 213320376}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3, z: -25}
-  m_LocalScale: {x: 50, y: 6, z: 1}
+  m_LocalPosition: {x: 0, y: 3, z: -32.5}
+  m_LocalScale: {x: 65, y: 6, z: 1.3}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2037038415}
@@ -1126,7 +1126,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -0.5, z: 0}
-  m_LocalScale: {x: 50, y: 1, z: 50}
+  m_LocalScale: {x: 65, y: 1, z: 65}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2037038415}
@@ -1283,8 +1283,8 @@ Transform:
   m_GameObject: {fileID: 722050324}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 25, y: 3, z: 0}
-  m_LocalScale: {x: 1, y: 6, z: 50}
+  m_LocalPosition: {x: 32.5, y: 3, z: 0}
+  m_LocalScale: {x: 1.3, y: 6, z: 65}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2037038415}
@@ -2544,8 +2544,8 @@ Transform:
   m_GameObject: {fileID: 1535357401}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3, z: 25}
-  m_LocalScale: {x: 50, y: 6, z: 1}
+  m_LocalPosition: {x: 0, y: 3, z: 32.5}
+  m_LocalScale: {x: 65, y: 6, z: 1.3}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2037038415}
@@ -2984,8 +2984,8 @@ Transform:
   m_GameObject: {fileID: 1980874332}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -25, y: 3, z: 0}
-  m_LocalScale: {x: 1, y: 6, z: 50}
+  m_LocalPosition: {x: -32.5, y: 3, z: 0}
+  m_LocalScale: {x: 1.3, y: 6, z: 65}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2037038415}
@@ -3078,6 +3078,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2037038415}
   - component: {fileID: 2037038416}
+  - component: {fileID: 3200000054}
   m_Layer: 0
   m_Name: Arena
   m_TagString: Untagged
@@ -3233,7 +3234,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.3, y: 1, z: 1.3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3100000025}
@@ -3267,7 +3268,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.3, y: 1, z: 1.3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3100000037}
@@ -3301,7 +3302,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.3, y: 1, z: 1.3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3100000049}
@@ -4851,6 +4852,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fda8b0eb9a4546a5815db05c606d43cf, type: 3}
+--- !u!114 &3200000054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2037038414}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4508c5439f340e491627a342d64d31d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.NavMeshAtStart
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
