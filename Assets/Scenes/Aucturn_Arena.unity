@@ -755,9 +755,13 @@ MonoBehaviour:
   slamCooldown: 3
   slamWarning: {fileID: 1409431403}
   scuttlerPrefab: {fileID: 9152386093921851600, guid: f578dccff1423ac488c1bf07630bcaa3, type: 3}
-  summonCount: 3
-  summonInterval: 12
+  summonCount: 4
+  summonInterval: 10
   summonRadius: 4
+  maxSummoned: 12
+  enrageBelow: 0.5
+  enragedExtraSummons: 2
+  enragedSlamCooldown: 0.6
 --- !u!114 &223185602
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -804,7 +808,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13107e0c76edffc478e2bf041b9a674f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.Health
-  maxHealth: 1500
+  maxHealth: 3000
   hitImmunity: 0
   onDamaged:
     m_PersistentCalls:
@@ -1764,12 +1768,13 @@ MonoBehaviour:
   - {fileID: 1294201972}
   - {fileID: 970585273}
   - {fileID: 871841768}
-  firstPackSize: 4
-  packGrowth: 2
-  maxPackSize: 8
+  firstPackSize: 6
+  packGrowth: 3
+  maxPackSize: 16
   packsToSpawn: 5
-  timeBetweenPacks: 2
+  timeBetweenPacks: 3
   clusterRadius: 1.5
+  splitAbove: 8
   onPackSpawned:
     m_PersistentCalls:
       m_Calls: []
@@ -8292,6 +8297,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.Boss
   displayName: HIVE MOTHER
+  meleeTaken: 0.35
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

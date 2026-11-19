@@ -12,6 +12,9 @@ namespace HyperInfinite
     ///
     /// A hard enough hit while she winds up (Stagger) knocks her off balance: the slam is cancelled,
     /// and she reels for a moment before she can walk or slam again.
+    ///
+    /// Below half health she enrages: she shrieks out a red burst, summons more Scuttlers at a time and
+    /// slams more often. She never keeps more than a set number of her summons alive at once.
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Health))]
     public class HiveMotherAI : MonoBehaviour
@@ -46,6 +49,16 @@ namespace HyperInfinite
         [SerializeField, Min(1f)] float summonInterval = 12f;
         [Tooltip("How far from her the Scuttlers appear.")]
         [SerializeField, Min(0f)] float summonRadius = 4f;
+        [Tooltip("She stops summoning while this many of her Scuttlers are alive.")]
+        [SerializeField, Min(1)] int maxSummoned = 12;
+
+        [Header("Enrage")]
+        [Tooltip("Share of her health below which she enrages.")]
+        [SerializeField, Range(0f, 1f)] float enrageBelow = 0.5f;
+        [Tooltip("Extra Scuttlers she summons each time once enraged.")]
+        [SerializeField, Min(0)] int enragedExtraSummons = 2;
+        [Tooltip("Her slam cooldown is multiplied by this once enraged; lower slams more often.")]
+        [SerializeField, Range(0.1f, 1f)] float enragedSlamCooldown = 0.6f;
 
         NavMeshAgent agent;
         Transform player;
@@ -54,6 +67,9 @@ namespace HyperInfinite
         float stateTimer, slamCooldownTimer, summonTimer, repathTimer;
         FaceCamera sprite;           // shows her sprite: it rears up, flashes and drops flat
         bool secondPulse;            // the second ring of sparks has gone out this wind-up
+        Health health;
+        bool enraged;
+        readonly System.Collections.Generic.List<GameObject> summoned = new System.Collections.Generic.List<GameObject>(16);
 
         /// <summary>True while she rears up before a slam, with the red ring blinking.</summary>
         public bool IsWindingUp => state == State.WindingUp;
@@ -62,6 +78,7 @@ namespace HyperInfinite
         {
             agent = GetComponent<NavMeshAgent>();
             sprite = GetComponentInChildren<FaceCamera>();
+            health = GetComponent<Health>();
             if (slamWarning) slamWarning.SetActive(false);
         }
 
@@ -84,6 +101,7 @@ namespace HyperInfinite
         {
             float dt = Time.deltaTime;
             slamCooldownTimer -= dt;
+            if (!enraged && health && health.Fraction <= enrageBelow) Enrage();
 
             // Summoning runs on its own clock, but only while she's walking
             summonTimer -= dt;
@@ -161,7 +179,7 @@ namespace HyperInfinite
             if (slamWarning) slamWarning.SetActive(false);
             state = State.Recovering;
             stateTimer = slamRecovery;
-            slamCooldownTimer = slamCooldown;
+            slamCooldownTimer = slamCooldown * (enraged ? enragedSlamCooldown : 1f);
 
             // She drops flat, and the shockwave bursts out across the ring
             if (sprite)
@@ -217,17 +235,30 @@ namespace HyperInfinite
             return true;
         }
 
+        /// <summary>Half health: a red shriek of chunks and two rings, and from now on more summons and quicker slams.</summary>
+        void Enrage()
+        {
+            enraged = true;
+            Vector3 middle = transform.position + Vector3.up * 1.2f;
+            PixelFx.Burst(middle, Palette.Red, Palette.DarkRed, 30, 8f, 0.5f, 0.18f);
+            PixelFx.Ring(transform.position, slamRadius, Palette.Red, 40, 0.4f, 0.26f);
+            PixelFx.Ring(transform.position, slamRadius * 0.5f, Palette.Yellow, 24, 0.3f, 0.2f);
+            summonTimer = Mathf.Min(summonTimer, 1f);   // her brood answers at once
+        }
+
         void Summon()
         {
             if (!scuttlerPrefab) return;
-            for (int i = 0; i < summonCount; i++)
+            summoned.RemoveAll(s => s == null);   // a destroyed Scuttler counts as null
+            int count = Mathf.Min(summonCount + (enraged ? enragedExtraSummons : 0), maxSummoned - summoned.Count);
+            for (int i = 0; i < count; i++)
             {
                 // Space them evenly in a circle around her
-                float angle = 360f * i / summonCount;
+                float angle = 360f * i / count;
                 Vector3 offset = Quaternion.Euler(0f, angle, 0f) * Vector3.forward * summonRadius;
                 Vector3 position = transform.position + offset;
                 if (NavMesh.SamplePosition(position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
-                    Instantiate(scuttlerPrefab, hit.position, Quaternion.identity);
+                    summoned.Add(Instantiate(scuttlerPrefab, hit.position, Quaternion.identity));
             }
         }
 

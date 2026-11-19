@@ -189,11 +189,12 @@ namespace HyperInfinite
         /// Called by Health whenever this Scuttler takes damage.
         void OnHurt()
         {
-            // Scatter every Scuttler near this one, including itself.
-            // ToArray() makes a copy, so the pack list can't change while we loop.
-            foreach (ScuttlerAI s in pack.ToArray())
-                if (Vector3.Distance(s.transform.position, transform.position) <= scatterRadius)
-                    s.Scatter();
+            // Scatter every Scuttler near this one, including itself. Scattering never changes the pack
+            // list, so it can be walked as it is, without copying it for every death.
+            Vector3 here = transform.position;
+            for (int i = 0; i < pack.Count; i++)
+                if ((pack[i].transform.position - here).sqrMagnitude <= scatterRadius * scatterRadius)
+                    pack[i].Scatter();
         }
 
         /// Run away from the player at an angle, then regroup.

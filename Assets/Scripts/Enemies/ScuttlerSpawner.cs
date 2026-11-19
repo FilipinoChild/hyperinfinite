@@ -25,6 +25,8 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float timeBetweenPacks = 3f;
         [Tooltip("How spread out a pack is when it appears, in meters.")]
         [SerializeField, Min(0f)] float clusterRadius = 1.5f;
+        [Tooltip("A pack bigger than this splits between two spawn points, so it comes at you from two sides. 0 never splits.")]
+        [SerializeField, Min(0)] int splitAbove = 8;
 
         [Header("Events")]
         [Tooltip("Sent with the pack number, starting at 1.")]
@@ -91,11 +93,15 @@ namespace HyperInfinite
                 return;
             }
 
-            Transform point = spawnPoints[Random.Range(0, spawnPoints.Length)];
+            int count = spawnPoints.Length;
+            int first = Random.Range(0, count);
             int size = Mathf.Min(maxPackSize, firstPackSize + packGrowth * packsSpawned);
+            // A big pack splits: every other Scuttler comes from a second, different spawn point.
+            int second = splitAbove > 0 && size > splitAbove && count > 1 ? (first + Random.Range(1, count)) % count : first;
 
             for (int i = 0; i < size; i++)
             {
+                Transform point = spawnPoints[i % 2 == 0 ? first : second];
                 // Scatter each Scuttler a little around the spawn point, on walkable ground
                 Vector2 offset = Random.insideUnitCircle * clusterRadius;
                 Vector3 position = point.position + new Vector3(offset.x, 0f, offset.y);

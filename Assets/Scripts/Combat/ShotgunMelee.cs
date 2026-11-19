@@ -35,7 +35,8 @@ namespace HyperInfinite
         public enum BashKind { Plain, Seared, Counter }
 
         [Header("Bash (tap Melee)")]
-        [SerializeField, Min(0f)] float bashDamage = 15f;
+        [Tooltip("A plain bash: a tenth of a Scuttler, so bashing marks and staggers more than it kills.")]
+        [SerializeField, Min(0f)] float bashDamage = 10f;
         [Tooltip("How far the bash reaches from the eyes, in meters.")]
         [SerializeField, Min(0.5f)] float bashRange = 2.4f;
         [Tooltip("How far off the crosshair, in degrees, a target can be and still be bashed.")]
@@ -46,13 +47,13 @@ namespace HyperInfinite
         [Header("Searing bash")]
         [Tooltip("Heat a searing bash spends. Below this much heat in the gun, the bash is plain.")]
         [SerializeField, Min(0f)] float searHeat = 10f;
-        [Tooltip("Damage a searing bash adds.")]
-        [SerializeField, Min(0f)] float searDamage = 20f;
+        [Tooltip("Damage a searing bash adds: 25 in all, a quarter of a Scuttler, so you can brand without killing.")]
+        [SerializeField, Min(0f)] float searDamage = 15f;
         [Tooltip("How hard a searing bash staggers what it hits, in meters per second.")]
         [SerializeField, Min(0f)] float searPush = 4f;
 
         [Header("Counter (bash a Scuttler as it winds up a bite)")]
-        [SerializeField, Min(0f)] float counterDamage = 25f;
+        [SerializeField, Min(0f)] float counterDamage = 30f;
         [SerializeField, Min(0f)] float counterPush = 10f;
 
         [Header("Brand")]
@@ -61,9 +62,9 @@ namespace HyperInfinite
         [Tooltip("A heavy bash sets off every brand within this many meters of you.")]
         [SerializeField, Min(0f)] float brandReach = 14f;
         [Tooltip("Each brand's burst does this much...")]
-        [SerializeField, Min(0f)] float brandDamage = 15f;
-        [Tooltip("...plus this much for each point of heat the bash dumped.")]
-        [SerializeField, Min(0f)] float brandHeatDamage = 0.5f;
+        [SerializeField, Min(0f)] float brandDamage = 20f;
+        [Tooltip("...plus this much for each point of heat the bash dumped: 80 from a full gauge, enough to finish a Scuttler that has taken a blast.")]
+        [SerializeField, Min(0f)] float brandHeatDamage = 0.6f;
         [Tooltip("How far each brand's burst splashes, in meters.")]
         [SerializeField, Min(0f)] float brandRadius = 2.5f;
 
@@ -662,6 +663,7 @@ namespace HyperInfinite
         void Hit(IDamageable target, float amount, Vector3 point, Vector3 direction, float distance)
         {
             LastHitTime = Time.time;
+            if (target is Component part && part.TryGetComponent(out Boss boss)) amount *= boss.MeleeTaken;   // bosses shrug off most of it
             target.TakeDamage(new DamageInfo
             {
                 Amount = amount, Kind = DamageKind.Melee, Point = point, Direction = direction.normalized,

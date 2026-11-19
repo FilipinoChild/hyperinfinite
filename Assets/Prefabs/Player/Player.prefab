@@ -667,19 +667,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1088a987f17f4f33834c1451ba40ce09, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.ShotgunMelee
-  bashDamage: 15
+  bashDamage: 10
   bashRange: 2.4
   bashAngle: 45
   bashCooldown: 0.35
   searHeat: 10
-  searDamage: 20
+  searDamage: 15
   searPush: 4
-  counterDamage: 25
+  counterDamage: 30
   counterPush: 10
   brandTime: 8
   brandReach: 14
-  brandDamage: 15
-  brandHeatDamage: 0.5
+  brandDamage: 20
+  brandHeatDamage: 0.6
   brandRadius: 2.5
   heavyDamage: 30
   heavyHeatDamage: 2.2
