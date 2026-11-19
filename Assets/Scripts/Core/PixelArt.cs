@@ -26,6 +26,10 @@ namespace HyperInfinite
         public static Sprite Corner => Get("Corner", 0, CornerRows);
         /// <summary>The ">" that marks the selected menu button.</summary>
         public static Sprite Chevron => Get("Chevron", 0, ChevronRows);
+        /// <summary>The mark beside a boss's name: a spider with its legs arched like the Hive Mother's, and holes for its eyes.</summary>
+        public static Sprite BossMark => Get("Boss Mark", 0, BossMarkRows);
+        /// <summary>The two eyes that fill the holes in BossMark, so they can be tinted their own color.</summary>
+        public static Sprite BossEyes => Get("Boss Eyes", 0, BossEyesRows);
 
         static readonly string[] OutlineRows =
         {
@@ -89,6 +93,32 @@ namespace HyperInfinite
             "..##.",
             ".##..",
             "##...",
+        };
+
+        static readonly string[] BossMarkRows =
+        {
+            "..##.......##..",
+            ".#..#.....#..#.",
+            "#..#..###..#..#",
+            "#.#..#####..#.#",
+            "#.#.#######.#.#",
+            "#.#.#.###.#.#.#",
+            "..#.#######.#..",
+            "..#..#.#.#..#..",
+            "..#.........#..",
+        };
+
+        static readonly string[] BossEyesRows =
+        {
+            "...............",
+            "...............",
+            "...............",
+            "...............",
+            "...............",
+            ".....#...#.....",
+            "...............",
+            "...............",
+            "...............",
         };
 
         /// <summary>

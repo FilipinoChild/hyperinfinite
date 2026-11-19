@@ -22,6 +22,8 @@ namespace HyperInfinite
     /// then the wave number with how many Scuttlers are left, a countdown between waves, and ALL CLEAR at
     /// the end. The number pops when a new wave arrives.
     ///
+    /// Top middle, while a Boss is in the fight, is the boss bar with its name and health (BossBar).
+    ///
     /// Getting hurt and going down are drawn by two helpers this makes: HurtOverlay (the red border and
     /// the arrows that point at whatever hit you) and DeathScreen (the Respawn button). PlayerRespawn
     /// does the actual respawning.
@@ -78,6 +80,9 @@ namespace HyperInfinite
         float wavePop, waveSearch;
         int lastWave = -1, shownTitle = int.MinValue, shownDetail = int.MinValue;
 
+        // Top middle.
+        BossBar bossBar;
+
         void Awake()
         {
             health = GetComponent<Health>();
@@ -132,6 +137,7 @@ namespace HyperInfinite
             if (health && view) hurt = new HurtOverlay(root, health, respawn, view.transform, lowHealth);   // first, so it's under everything else
             BuildMeters(root);
             BuildWaveCounter(root);
+            bossBar = new BossBar(root);
             BuildCrosshair(root);
             BuildHeatGauge(root);
             if (respawn) deathScreen = new DeathScreen(root, respawn, Respawn);   // last, so it covers everything else
@@ -248,6 +254,7 @@ namespace HyperInfinite
                 UpdateHeatGauge();
             }
             UpdateWaveCounter(dt);
+            bossBar.Tick(dt);
             UpdateMeters(dt);
         }
 
