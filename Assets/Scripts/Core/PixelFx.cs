@@ -92,6 +92,13 @@ namespace HyperInfinite
             }
         }
 
+        /// <summary>One small square drifting through the air with no gravity: dust, spores, specks of silk.</summary>
+        public static void Mote(Vector3 position, Vector3 velocity, Color color, float size = 0.05f, float life = 4f)
+        {
+            PixelFx fx = Get();
+            if (fx) fx.Spawn(KindChunk, position, velocity, color, size, life, 0f);
+        }
+
         /// <summary>One big square for an instant: an impact or a pop.</summary>
         public static void Flash(Vector3 point, Color color, float size = 0.4f, float life = 0.06f)
         {
