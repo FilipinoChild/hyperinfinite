@@ -17,7 +17,8 @@ namespace HyperInfinite
     /// is waiting, while the cells strobe and embers drift off the muzzle. A pop and a white flash of the
     /// cells say it's ready. The heavy bash slams the gun forward: the cells flash white, a three-frame
     /// explosion goes off at the emitters with a shockwave ring growing in steps, and the screen flashes amber
-    /// for two frames, all bigger the more heat went into it.
+    /// for two frames, all bigger the more heat went into it. An overload, from a redlined gun, is bigger still
+    /// and flashes white first, for three frames.
     ///
     /// Put it next to EnergyBlastShotgun, under the camera. It makes its own screen-space canvas, so the
     /// gun never pokes into walls. The texture needs Read/Write switched on for the emitter glow, and
@@ -240,7 +241,7 @@ namespace HyperInfinite
                 bash = Swing((now - melee.LastBashTime) / bashTime);
                 heavy = Swing((now - melee.LastHeavyTime) / heavyTime);
                 power = melee.LastHeavyPower;
-                charging = melee.IsCharging;
+                charging = melee.IsCharging || melee.IsLunging;   // held back through the lunge, then slammed forward as it lands
                 if (charging && !wasCharging) readyAt = now;   // held long enough: letting go now throws it
                 wasCharging = charging;
             }
@@ -360,7 +361,8 @@ namespace HyperInfinite
 
             // A heavy bash: three frames of explosion, white, yellow, then red or amber, each bigger the hotter it was.
             float sinceHeavy = now - melee.LastHeavyTime;
-            float scale = gunHeight * (0.45f + 0.5f * power);
+            bool overload = melee.LastHeavyOverload;
+            float scale = gunHeight * (0.45f + 0.5f * power) * (overload ? 1.2f : 1f);
             bool showBlast = sinceHeavy < BlastTime;
             blast.enabled = showBlast;
             if (showBlast)
@@ -380,15 +382,17 @@ namespace HyperInfinite
                 ring.color = step == 0 ? Palette.Yellow : step == 3 ? Palette.Red : Palette.Amber;
             }
 
-            // The whole view flashes for two frames: amber, then red. A counter gets one faint yellow frame.
+            // The whole view flashes for two frames: amber, then red. An overload flashes white first, for three.
+            // A counter gets one faint yellow frame.
             bool counterFlash = melee.LastBash == ShotgunMelee.BashKind.Counter && melee.LastBashLanded && sinceBash < ScreenFlashTime * 0.5f;
-            bool heavyFlash = sinceHeavy < ScreenFlashTime;
+            int frames = overload ? 3 : 2;
+            bool heavyFlash = sinceHeavy < ScreenFlashTime * 0.5f * frames;
             screenFlash.enabled = heavyFlash || counterFlash;
             if (heavyFlash)
             {
-                bool first = sinceHeavy < ScreenFlashTime * 0.5f;
-                Color c = first ? Palette.Amber : Palette.Red;
-                c.a = (first ? 0.14f : 0.08f) + (first ? 0.18f : 0.1f) * power;
+                int frame = (int)(sinceHeavy / (ScreenFlashTime * 0.5f)) + (overload ? 0 : 1);   // 0 white, 1 amber, 2 red
+                Color c = frame == 0 ? Palette.White : frame == 1 ? Palette.Amber : Palette.Red;
+                c.a = frame == 0 ? 0.35f : frame == 1 ? 0.14f + 0.18f * power : 0.08f + 0.1f * power;
                 screenFlash.color = c;
             }
             else if (counterFlash)

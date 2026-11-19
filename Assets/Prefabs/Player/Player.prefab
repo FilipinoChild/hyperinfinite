@@ -683,14 +683,20 @@ MonoBehaviour:
   brandRadius: 2.5
   heavyDamage: 30
   heavyHeatDamage: 2.2
-  heavyRange: {x: 3, y: 4.5}
-  heavyAngle: 38
+  heavyRange: {x: 3.5, y: 7}
+  heavyWidth: {x: 40, y: 65}
+  heavyEdgeDamage: 0.8
   heavyPush: {x: 5, y: 14}
   chargeSlow: 0.6
-  lunge: 6
+  lungeSpeed: 22
+  lungeTime: 0.18
   recoil: 4
-  protection: 0.25
+  protection: 0.4
   heavyCooldown: 0.6
+  overloadDamage: 1.5
+  overloadReach: 1.5
+  overloadWidth: 10
+  overloadPush: 4
   blastJumpPitch: 50
   blastJumpHeight: {x: 1.6, y: 4.2}
   blastJumpRadius: {x: 2.5, y: 4}

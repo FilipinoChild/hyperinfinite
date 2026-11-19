@@ -13,9 +13,10 @@ namespace HyperInfinite
     /// In the middle sits the crosshair. Its gap shows the shotgun's spread, so it tightens as you aim,
     /// and red marks flash at its corners when a blast or a bash lands. Below it is the shotgun's heat gauge:
     /// amber as heat builds, flashing when the next blast would redline the gun, and red once it has. While a
-    /// heavy bash charges, the gauge strobes (it's how hard the bash will hit) and RELEASE TO BASH shows. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
+    /// heavy bash charges, the gauge strobes (it's how hard the bash will hit) and RELEASE TO BASH shows, or
+    /// RELEASE TO OVERLOAD from a redlined gun. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
     /// fills up, flashes when the dash is ready and then gets out of the way, so you can tell without
-    /// looking down. LAST SHOT, VENTING or REDLINE! VENT OR BASH shows below both, only when there's something to do.
+    /// looking down. LAST SHOT, VENTING or REDLINE! VENT OR OVERLOAD shows below both, only when there's something to do.
     /// Above the crosshair, WEBBED! SHOOT THE WEB blinks while a Web Trap has hold of you.
     ///
     /// Top left is the wave counter, for scenes with a ScuttlerSpawner: GET READY before the first wave,
@@ -369,13 +370,14 @@ namespace HyperInfinite
             UiKit.SetFill(heatFill, heat, HeatBarWidth);
             heatFill.color = charging ? (strobe ? Palette.White : Palette.Amber)
                            : redlined ? Palette.Red : flashing ? Palette.White : heat > 0.5f ? Palette.Amber : Palette.Yellow;
-            int label = charging ? 4 : shotgun.IsVenting ? 2 : redlined ? 3 : shotgun.AboutToRedline ? 1 : 0;   // nothing while all is well
+            int label = charging ? (redlined ? 5 : 4) : shotgun.IsVenting ? 2 : redlined ? 3 : shotgun.AboutToRedline ? 1 : 0;   // nothing while all is well
             if (label != shownHeatLabel)
             {
                 shownHeatLabel = label;
-                heatLabel.text = label == 4 ? "RELEASE TO BASH" : label == 3 ? "REDLINE! VENT OR BASH" : label == 2 ? "VENTING" : label == 1 ? "LAST SHOT" : "";
+                heatLabel.text = label == 5 ? "RELEASE TO OVERLOAD" : label == 4 ? "RELEASE TO BASH" : label == 3 ? "REDLINE! VENT OR OVERLOAD"
+                               : label == 2 ? "VENTING" : label == 1 ? "LAST SHOT" : "";
             }
-            heatLabel.color = charging ? (strobe ? Palette.White : Palette.Amber)
+            heatLabel.color = charging ? (strobe ? Palette.White : redlined ? Palette.Red : Palette.Amber)
                             : redlined && !shotgun.IsVenting ? (Mathf.Repeat(Time.unscaledTime * 3f, 1f) < 0.5f ? Palette.Red : Palette.White)
                             : flashing ? Palette.Red : Palette.White;
         }

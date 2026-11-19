@@ -11,7 +11,8 @@ namespace HyperInfinite
     ///
     /// Sticky ground, such as a Web Trap, slows all of it down through Snare: while snared the player
     /// runs and dashes at a fraction of their speed and can't jump. Slow is the same without the
-    /// jumping ban, for heavy things like charging a heavy bash, and Launch throws the player upward.
+    /// jumping ban, for heavy things like charging a heavy bash. Launch throws the player upward, and Lunge
+    /// throws them forward the way a dash does, without spending the dash.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
     [DefaultExecutionOrder(-20)]   // after input and the camera's turn, before shooting
@@ -64,6 +65,7 @@ namespace HyperInfinite
 
         CharacterController body;
         Vector3 velocity, dashDirection;
+        float burstSpeed;   // the speed of the dash or lunge under way
         float coyoteTimer, jumpBufferTimer, dashTimer, dashCooldownTimer, airTime;
         float snareScale = 1f, snaredUntil = -1f, slowScale = 1f, slowedUntil = -1f;
         int airJumpsUsed;
@@ -115,8 +117,8 @@ namespace HyperInfinite
             if (dashTimer > 0f)
             {
                 dashTimer -= dt;
-                velocity.x = dashDirection.x * dashSpeed * pace;
-                velocity.z = dashDirection.z * dashSpeed * pace;
+                velocity.x = dashDirection.x * burstSpeed * pace;
+                velocity.z = dashDirection.z * burstSpeed * pace;
                 if (dashTimer <= 0f)
                 {
                     velocity.x *= dashCarry;
@@ -205,6 +207,20 @@ namespace HyperInfinite
             coyoteTimer = jumpBufferTimer = 0f;
         }
 
+        /// <summary>
+        /// Throws the player along <paramref name="direction"/> at <paramref name="speed"/> meters per second for
+        /// <paramref name="seconds"/>, moving the way a dash does (and ending with the same carry), but without
+        /// starting the dash's cooldown. A heavy bash's lunge uses it.
+        /// </summary>
+        public void Lunge(Vector3 direction, float speed, float seconds)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 1e-4f || seconds <= 0f) return;
+            dashDirection = direction.normalized;
+            burstSpeed = speed;
+            dashTimer = seconds;
+        }
+
         /// <summary>Knock-back from blasts, in meters per second. An upward push lifts you off the ground.</summary>
         public void Push(Vector3 velocityChange)
         {
@@ -240,6 +256,7 @@ namespace HyperInfinite
         void StartDash(Vector3 wish)
         {
             dashDirection = wish.sqrMagnitude > 0.01f ? wish.normalized : Flat(transform.forward);
+            burstSpeed = dashSpeed;
             dashTimer = dashDuration;
             dashCooldownTimer = dashCooldown;
             onDash.Invoke();

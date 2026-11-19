@@ -13,10 +13,14 @@ namespace HyperInfinite
     /// embers for a few seconds. Bash a Scuttler while it crouches to bite and the bite is countered: it takes
     /// extra damage and is thrown clear.
     ///
-    /// Hold Melee to charge a heavy bash (you move slower while charging), and let go to throw it. It dumps
-    /// every point of heat in the gun into one explosion out of the emitters: the more heat, the harder and
-    /// wider it hits and the harder it throws enemies back. A cold one lunges you forward; a full one kicks you
-    /// back. Every brand within reach bursts at the same moment, splashing whatever is near it. If the Hive
+    /// Hold Melee to charge a heavy bash (you move slower while charging), and let go to throw it: you lunge
+    /// about 4 m forward, safe from harm, and as the lunge ends the bash lands. It dumps every point of heat in
+    /// the gun into one explosion out of the emitters: the more heat, the harder, wider
+    /// and further it hits and the harder it throws enemies back, so a full gauge clears a crowd. Enemies don't
+    /// shield each other from it; only walls and rocks do. From a redlined gun it overloads, hitting harder and
+    /// wider still. A full gauge kicks you back a little as it goes off. Heat bolts fan out across the
+    /// cone, a shockwave sweeps the floor, and every enemy hit flares. Every brand within reach bursts at the
+    /// same moment, splashing whatever is near it. If the Hive
     /// Mother is winding up a slam and the bash carries enough heat, the slam is cancelled. Aim at the floor to
     /// blast-jump: the explosion goes off underfoot and throws you up, higher the hotter it was.
     ///
@@ -68,21 +72,35 @@ namespace HyperInfinite
         [Tooltip("Damage added for each point of heat dumped: 2.2 makes a full gauge hit for 250.")]
         [SerializeField, Min(0f)] float heavyHeatDamage = 2.2f;
         [Tooltip("How far the blast reaches with no heat, and with a full gauge, in meters.")]
-        [SerializeField] Vector2 heavyRange = new Vector2(3f, 4.5f);
-        [Tooltip("Half-width of the blast's cone, in degrees.")]
-        [SerializeField, Range(5f, 90f)] float heavyAngle = 38f;
+        [SerializeField] Vector2 heavyRange = new Vector2(3.5f, 7f);
+        [Tooltip("Half-width of the blast's cone with no heat, and with a full gauge, in degrees.")]
+        [SerializeField] Vector2 heavyWidth = new Vector2(40f, 65f);
+        [Tooltip("Share of the damage still done at the far edge of the cone.")]
+        [SerializeField, Range(0f, 1f)] float heavyEdgeDamage = 0.8f;
         [Tooltip("How hard it throws enemies back with no heat, and with a full gauge, in meters per second.")]
         [SerializeField] Vector2 heavyPush = new Vector2(5f, 14f);
         [Tooltip("Share of your speed you keep while charging.")]
         [SerializeField, Range(0.1f, 1f)] float chargeSlow = 0.6f;
-        [Tooltip("Forward push a cold bash gives you, in meters per second...")]
-        [SerializeField, Min(0f)] float lunge = 6f;
-        [Tooltip("...and the backward kick a full one gives you instead.")]
+        [Tooltip("Speed of the lunge forward when you let go, in meters per second.")]
+        [SerializeField, Min(0f)] float lungeSpeed = 22f;
+        [Tooltip("Seconds the lunge lasts; the bash lands as it ends. 0.18 at 22 m/s covers about 4 m. 0 lands it at once, with no lunge.")]
+        [SerializeField, Min(0f)] float lungeTime = 0.18f;
+        [Tooltip("The backward kick a full gauge gives you as the bash lands, in meters per second.")]
         [SerializeField, Min(0f)] float recoil = 4f;
-        [Tooltip("Seconds you can't be hurt as the bash goes off, so a swarm can't punish every swing.")]
-        [SerializeField, Min(0f)] float protection = 0.25f;
+        [Tooltip("Seconds you can't be hurt after letting go, covering the lunge and the blast, so a swarm can't punish every swing.")]
+        [SerializeField, Min(0f)] float protection = 0.4f;
         [Tooltip("Seconds before the shotgun can be used again after a heavy bash.")]
         [SerializeField, Min(0.05f)] float heavyCooldown = 0.6f;
+
+        [Header("Overload (a heavy bash from a redlined gun)")]
+        [Tooltip("Damage is multiplied by this.")]
+        [SerializeField, Min(1f)] float overloadDamage = 1.5f;
+        [Tooltip("Meters added to the reach.")]
+        [SerializeField, Min(0f)] float overloadReach = 1.5f;
+        [Tooltip("Degrees added to the cone's half-width.")]
+        [SerializeField, Min(0f)] float overloadWidth = 10f;
+        [Tooltip("Meters per second added to the throw.")]
+        [SerializeField, Min(0f)] float overloadPush = 4f;
 
         [Header("Blast jump (heavy bash at the floor)")]
         [Tooltip("How far below level, in degrees, you must aim for the bash to hit the floor and launch you.")]
@@ -120,7 +138,8 @@ namespace HyperInfinite
         }
 
         const int MaxBrands = 12;
-        static readonly Collider[] overlap = new Collider[64];
+        static readonly Collider[] overlap = new Collider[128];
+        static readonly RaycastHit[] sight = new RaycastHit[16];
 
         readonly Brand[] brands = new Brand[MaxBrands];
         readonly List<IDamageable> struck = new List<IDamageable>(16);
@@ -130,8 +149,11 @@ namespace HyperInfinite
         PlayerMotor motor;
         Health health;
         Transform view, player;
-        float readyAt;
+        float readyAt, landAt, pendingHeat;
+        bool lunging, pendingOverload;
 
+        /// <summary>True during the lunge between letting go of a heavy bash and the bash landing.</summary>
+        public bool IsLunging => lunging;
         /// <summary>True while Melee is held long enough that letting go throws a heavy bash.</summary>
         public bool IsCharging => controls && controls.HeavyMeleeCharging && !IsDown;
         /// <summary>Seconds Melee has been held, while it's down.</summary>
@@ -142,6 +164,8 @@ namespace HyperInfinite
         /// <summary>When the last heavy bash went off, and its power: 0 cold, 1 a full gauge.</summary>
         public float LastHeavyTime { get; private set; } = -100f;
         public float LastHeavyPower { get; private set; }
+        /// <summary>True if the last heavy bash came from a redlined gun.</summary>
+        public bool LastHeavyOverload { get; private set; }
         /// <summary>When a bash or heavy bash last hurt something.</summary>
         public float LastHitTime { get; private set; } = -100f;
         /// <summary>True if the last bash connected.</summary>
@@ -165,12 +189,18 @@ namespace HyperInfinite
         void Update()
         {
             TendBrands();
+            if (IsDown) lunging = false;   // going down mid-lunge calls the bash off
+            if (lunging && Time.time >= landAt)
+            {
+                lunging = false;
+                Land(pendingHeat, pendingOverload, false);
+            }
             if (!controls || IsDown) return;
 
             if (controls.HeavyMeleeCharging && motor) motor.Slow(chargeSlow);
             if (Time.time < readyAt) return;
             if (controls.QuickMeleePressed) Bash();
-            else if (controls.HeavyMeleeReleased) HeavyBash();
+            else if (controls.HeavyMeleeReleased) Release();
         }
 
         // ---- The bash ---------------------------------------------------------------------------
@@ -252,63 +282,147 @@ namespace HyperInfinite
 
         // ---- The heavy bash -------------------------------------------------------------------
 
-        void HeavyBash()
+        /// <summary>
+        /// Letting go of a charged heavy bash: the heat comes out of the gun now, you're protected, and you lunge
+        /// forward with the bash landing as the lunge ends. Aimed at the floor, it lands at once instead.
+        /// </summary>
+        void Release()
         {
-            readyAt = Time.time + heavyCooldown;
+            bool overload = shotgun.IsRedlined;
             float heat = shotgun.DumpHeat();
+            if (health) health.Protect(protection);
+            Vector3 forward = view.forward;
+            bool atFloor = forward.y < -Mathf.Sin(blastJumpPitch * Mathf.Deg2Rad);
+            if (atFloor || lungeTime <= 0f || !motor)
+            {
+                readyAt = Time.time + heavyCooldown;
+                Land(heat, overload, true);
+                return;
+            }
+            motor.Lunge(forward, lungeSpeed, lungeTime);
+            lunging = true;
+            landAt = Time.time + lungeTime;
+            pendingHeat = heat;
+            pendingOverload = overload;
+            readyAt = landAt + heavyCooldown;
+        }
+
+        /// <summary>The heavy bash lands: a blast ahead, or underfoot if aimed at the floor, and every brand in reach bursts.</summary>
+        void Land(float heat, bool overload, bool mayHitFloor)
+        {
             float power = Mathf.Clamp01(heat / 100f);
             LastHeavyTime = Time.time;
             LastHeavyPower = power;
-            if (health) health.Protect(protection);
+            LastHeavyOverload = overload;
 
             Vector3 origin = view.position, forward = view.forward;
-            float damage = heavyDamage + heavyHeatDamage * heat;
-            float push = Mathf.Lerp(heavyPush.x, heavyPush.y, power);
+            float damage = (heavyDamage + heavyHeatDamage * heat) * (overload ? overloadDamage : 1f);
+            float push = Mathf.Lerp(heavyPush.x, heavyPush.y, power) + (overload ? overloadPush : 0f);
 
             // Aimed at the floor, close enough to touch it: the blast goes off underfoot and throws you up.
-            float reach = Mathf.Lerp(heavyRange.x, heavyRange.y, power);
+            float reach = Mathf.Lerp(heavyRange.x, heavyRange.y, power) + (overload ? overloadReach : 0f);
             RaycastHit floor = default;
-            bool atFloor = forward.y < -Mathf.Sin(blastJumpPitch * Mathf.Deg2Rad)
+            bool atFloor = mayHitFloor && forward.y < -Mathf.Sin(blastJumpPitch * Mathf.Deg2Rad)
                            && Raycasts.Nearest(origin, forward, reach + 0.5f, player, out floor, false)
                            && floor.normal.y > 0.6f;
-            if (atFloor) BlastJump(floor.point, power, damage, push);
-            else Blast(origin, forward, reach, power, damage, push);
+            if (atFloor) BlastJump(floor.point, power, damage, push, overload);
+            else Blast(origin, forward, reach, power, damage, push, overload);
 
             int burst = Detonate(heat);
             onHeavyBash.Invoke(power);
             onRecoil.Invoke(Mathf.Lerp(2.5f, 7f, power) + (burst > 0 ? 1f : 0f));
         }
 
-        /// <summary>The bash thrown forward: everything in the cone in front is hit, the hotter the harder.</summary>
-        void Blast(Vector3 origin, Vector3 forward, float reach, float power, float damage, float push)
+        /// <summary>The bash thrown forward: everything in the cone in front is hit, the hotter the harder, wider and further.</summary>
+        void Blast(Vector3 origin, Vector3 forward, float reach, float power, float damage, float push, bool overload)
         {
-            Gather(origin + forward * (reach * 0.5f), reach * 0.5f + 1f, origin);
+            float width = Mathf.Lerp(heavyWidth.x, heavyWidth.y, power) + (overload ? overloadWidth : 0f);
+            Gather(origin, reach, origin);   // all round, then trimmed to the cone, so even the widest cone is covered
+            int hits = 0;
             for (int i = 0; i < struck.Count; i++)
             {
                 Collider c = struckBy[i];
                 Vector3 point = c.bounds.ClosestPoint(origin);
                 float distance = Vector3.Distance(origin, point);
                 if (distance > reach) continue;
-                if (distance > 0.5f && Vector3.Angle(forward, point - origin) > heavyAngle) continue;
+                if (distance > 0.5f && Vector3.Angle(forward, point - origin) > width) continue;
                 if (!InSight(origin, point, struck[i])) continue;
-                float closeness = 1f - 0.4f * Mathf.Clamp01(distance / reach);   // full damage up close, 60% at the edge
+                float closeness = Mathf.Lerp(1f, heavyEdgeDamage, distance / reach);
                 Hit(struck[i], damage * closeness, point, forward, distance);
                 Shove(c, Flat(point - origin, forward) * (push * closeness) + Vector3.up * (push * 0.2f));
                 TryStagger(c, power);
+                Flare(point, point - origin, power, overload, hits++);
             }
 
-            // A cold bash carries you into it; a full one kicks you back.
-            if (motor) motor.Push(Flat(forward) * Mathf.Lerp(lunge, -recoil, power));
+            // A full gauge kicks you back a little as it goes off.
+            if (motor && power > 0f) motor.Push(-Flat(forward) * (recoil * power));
 
             Vector3 muzzle = origin + forward * 0.9f - view.up * 0.15f;
-            PixelFx.Flash(muzzle, Palette.White, 0.4f + 0.5f * power, 0.07f);
-            PixelFx.Cone(muzzle, forward, heavyAngle * 0.8f, power > 0.5f ? Palette.Red : Palette.Amber, Palette.Yellow,
-                         Mathf.RoundToInt(12f + 36f * power), reach / 0.28f, 0.28f, 0.12f + 0.08f * power);
+            PixelFx.Flash(muzzle, Palette.White, 0.4f + 0.5f * power + (overload ? 0.3f : 0f), 0.07f);
+            PixelFx.Cone(muzzle, forward, width * 0.8f, power > 0.5f ? Palette.Red : Palette.Amber, Palette.Yellow,
+                         Mathf.RoundToInt(16f + 40f * power), reach / 0.28f, 0.28f, 0.12f + 0.08f * power);
+            HeatBolts(origin, muzzle, forward, reach, width, power, overload);
+            Shockwave(forward, reach, width, power, overload);
+            Embers(origin, forward, reach, width, power);
+        }
+
+        /// <summary>Bolts of heat fanned out across the cone from the emitters, the gun's own blast drawn in amber and red, stopping at walls.</summary>
+        void HeatBolts(Vector3 origin, Vector3 muzzle, Vector3 forward, float reach, float width, float power, bool overload)
+        {
+            int count = Mathf.RoundToInt(7f + 10f * power) + (overload ? 4 : 0);
+            Vector3 up = view.up;
+            for (int i = 0; i < count; i++)
+            {
+                float across = count > 1 ? Mathf.Lerp(-width, width, (i + Random.Range(-0.3f, 0.3f)) / (count - 1)) : 0f;
+                Vector3 direction = Quaternion.AngleAxis(across, up) * Quaternion.AngleAxis(Random.Range(-6f, 6f), view.right) * forward;
+                float length = reach * Random.Range(0.75f, 1f);
+                Vector3 end = Raycasts.Nearest(origin, direction, length, player, out RaycastHit wall, false) ? wall.point : origin + direction * length;
+                Color color = i % 3 == 0 ? Palette.Yellow : i % 3 == 1 ? Palette.Amber : Palette.Red;
+                PixelFx.Bolt(muzzle, end, overload && i % 4 == 0 ? Palette.White : color, 0.07f + 0.05f * power, 0.12f + 0.06f * power);
+            }
+        }
+
+        /// <summary>The shockwave sweeping the floor across the cone: yellow, then amber, then red, each a little wider and slower.</summary>
+        void Shockwave(Vector3 forward, float reach, float width, float power, bool overload)
+        {
+            Vector3 feet = player.position;
+            int count = Mathf.RoundToInt(16f + 22f * power);
+            PixelFx.Fan(feet, forward, reach * 0.85f, width, Palette.Yellow, count, 0.2f, 0.18f);
+            PixelFx.Fan(feet, forward, reach, width, Palette.Amber, count + 6, 0.28f, 0.22f);
+            if (power > 0.4f) PixelFx.Fan(feet, forward, reach * 1.1f, width, Palette.Red, count + 10, 0.36f, 0.26f);
+            if (overload) PixelFx.Fan(feet, forward, reach * 0.6f, width + 10f, Palette.White, count, 0.14f, 0.2f);
+        }
+
+        /// <summary>Heat left hanging in the air across the cone: embers that rise and fade over a second.</summary>
+        void Embers(Vector3 origin, Vector3 forward, float reach, float width, float power)
+        {
+            int count = Mathf.RoundToInt(8f + 28f * power);
+            Vector3 flat = Flat(forward), ground = player.position;
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 direction = Quaternion.AngleAxis(Random.Range(-width, width), Vector3.up) * flat;
+                Vector3 at = ground + direction * Random.Range(1f, reach) + Vector3.up * Random.Range(0.2f, 1.8f);
+                Color color = Random.value < 0.4f ? Palette.Amber : Random.value < 0.6f ? Palette.Red : Palette.Yellow;
+                PixelFx.Mote(at, Vector3.up * Random.Range(0.4f, 0.9f) + direction * 0.5f, color, Random.Range(0.05f, 0.08f), Random.Range(0.6f, 1f));
+            }
+        }
+
+        /// <summary>
+        /// Where the blast meets an enemy: a flash, chunks thrown on through it, and sparks. Fewer pieces each the
+        /// more there are, so a whole crowd still fits in the effects pool.
+        /// </summary>
+        void Flare(Vector3 point, Vector3 travel, float power, bool overload, int index)
+        {
+            int pieces = index < 6 ? 8 : index < 14 ? 5 : 3;
+            PixelFx.Flash(point, index % 2 == 0 ? Palette.White : Palette.Yellow, 0.4f + 0.3f * power + (overload ? 0.15f : 0f), 0.07f);
+            PixelFx.Cone(point, travel, 40f, Palette.Amber, Palette.Red, pieces, 4f + 4f * power, 0.35f, 0.11f);
+            PixelFx.Sparks(point, -travel.normalized, Palette.Yellow, pieces / 2 + 1, 5f, 0.25f);
         }
 
         /// <summary>The bash into the floor: a shockwave all round where it lands, and you're thrown upward.</summary>
-        void BlastJump(Vector3 ground, float power, float damage, float push)
+        void BlastJump(Vector3 ground, float power, float damage, float push, bool overload)
         {
+            int hits = 0;
             float radius = Mathf.Lerp(blastJumpRadius.x, blastJumpRadius.y, power);
             Gather(ground, radius, ground);
             for (int i = 0; i < struck.Count; i++)
@@ -321,6 +435,7 @@ namespace HyperInfinite
                 Hit(struck[i], damage * closeness, point, point - ground, distance);
                 Shove(c, Flat(point - ground, view.forward) * (push * closeness) + Vector3.up * (push * 0.3f));
                 TryStagger(c, power);
+                Flare(point, point - ground, power, overload, hits++);
             }
 
             if (motor) motor.Launch(Mathf.Sqrt(2f * motor.Gravity * Mathf.Lerp(blastJumpHeight.x, blastJumpHeight.y, power)));
@@ -329,6 +444,7 @@ namespace HyperInfinite
             PixelFx.Ring(ground, radius, power > 0.5f ? Palette.Red : Palette.Amber, Mathf.RoundToInt(20f + 20f * power), 0.3f, 0.24f);
             PixelFx.Ring(ground, radius * 0.55f, Palette.Yellow, 16, 0.22f, 0.18f);
             PixelFx.Burst(ground + Vector3.up * 0.2f, Palette.Amber, Palette.Red, Mathf.RoundToInt(12f + 24f * power), 5f + 5f * power, 0.4f, 0.14f);
+            if (overload) PixelFx.Ring(ground, radius * 1.3f, Palette.White, 24, 0.18f, 0.2f);
             onBlastJump.Invoke();
         }
 
@@ -449,14 +565,24 @@ namespace HyperInfinite
             }
         }
 
-        /// <summary>True if nothing solid stands between <paramref name="from"/> and <paramref name="point"/> on <paramref name="target"/>.</summary>
+        /// <summary>
+        /// True if no wall, rock or other scenery stands between <paramref name="from"/> and <paramref name="point"/>.
+        /// Enemies and other things that can be hurt don't count, so a crowd doesn't shield its back rows.
+        /// </summary>
         bool InSight(Vector3 from, Vector3 point, IDamageable target)
         {
             Vector3 to = point - from;
-            float distance = to.magnitude;
-            if (distance < 0.05f) return true;
-            if (!Raycasts.Nearest(from, to / distance, distance, player, out RaycastHit hit, false)) return true;
-            return hit.distance >= distance - 0.1f || ReferenceEquals(hit.collider.GetComponentInParent<IDamageable>(), target);
+            float distance = to.magnitude - 0.1f;
+            if (distance <= 0.05f) return true;
+            int count = Physics.RaycastNonAlloc(from, to.normalized, sight, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                Collider c = sight[i].collider;
+                if (c.transform.IsChildOf(player)) continue;
+                if (c.GetComponentInParent<IDamageable>() != null) continue;
+                return false;
+            }
+            return true;
         }
 
         void Hit(IDamageable target, float amount, Vector3 point, Vector3 direction, float distance)
