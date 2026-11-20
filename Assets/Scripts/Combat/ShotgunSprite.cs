@@ -19,7 +19,8 @@ namespace HyperInfinite
     /// explosion goes off at the emitters with a shockwave ring growing in steps, and the screen flashes amber
     /// for two frames, all bigger the more heat went into it. An overload, from a redlined gun, is bigger still
     /// and flashes white first, for three frames. Under HYPER all of it is cyan and white instead, and the
-    /// cells glow white and cyan for as long as HYPER lasts.
+    /// cells glow white and cyan for as long as HYPER lasts. While a vent heals you they step between green and
+    /// pale green, and flash red if a hit cuts the heal short.
     ///
     /// Put it next to EnergyBlastShotgun, under the camera. It makes its own screen-space canvas, so the
     /// gun never pokes into walls. The texture needs Read/Write switched on for the emitter glow, and
@@ -304,6 +305,7 @@ namespace HyperInfinite
                 Color hue = peak > 0f ? Color.Lerp(new Color(g.r / peak, g.g / peak, g.b / peak), Color.white, 0.2f) : Color.black;
                 hue.a = Mathf.Clamp01(peak / FullGlow);
                 if (melee) hue = MeleeGlow(hue, now, heat);
+                hue = HealGlow(hue, now);
                 glow.color = hue;
             }
             if (melee) MeleeEffects(now, gunHeight, power, heat);
@@ -351,6 +353,14 @@ namespace HyperInfinite
                 return lit ? Color.white : new Color(CoolCells.r, CoolCells.g, CoolCells.b, 1f);
             }
             return hue;
+        }
+
+        /// <summary>The cells step between green and pale green while a vent heals you, and flash red when a hit cuts it short.</summary>
+        Color HealGlow(Color hue, float now)
+        {
+            if (now - shotgun.LastHealCutTime < 0.15f) return Palette.Red;
+            if (!shotgun.IsVentHealing) return hue;
+            return Mathf.Repeat(now * 6f, 1f) < 0.5f ? Palette.Green : Palette.PaleGreen;
         }
 
         /// <summary>The impact star, the heavy bash's explosion, shockwave and screen flash, and embers while charging. Two to four frames each.</summary>

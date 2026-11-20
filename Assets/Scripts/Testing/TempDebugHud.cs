@@ -160,10 +160,11 @@ namespace HyperInfinite
             if (!shotgun) return;
             cursorY += 6f;
             string state = shotgun.IsRedlined ? "<color=#ff5a3c>REDLINED</color>"
+                         : shotgun.IsVentHealing ? $"<color=#5ce676>venting, healing {shotgun.VentHealLeft:0} more</color>"
                          : shotgun.IsVenting ? "<color=#ffb347>venting</color>"
                          : shotgun.CanFire ? "ready" : "lever cycling";
             string aim = shotgun.IsAiming ? "  ·  <color=#31c8ff>aiming</color>" : "";
-            Line($"<b>Energy Blast shotgun</b>  {shotgun.Bolts} bolts  ·  {shotgun.Spread:0.0}° spread  ·  heat {shotgun.Heat01 * 100f:0}%  ·  {state}{aim}");
+            Line($"<b>Energy Blast shotgun</b>  {shotgun.Bolts} bolts  ·  {shotgun.Spread:0.0}° spread  ·  heat {shotgun.Heat01 * 100f:0}% ({shotgun.HitHeat01 * 100f:0} from hits)  ·  {state}{aim}");
             ShotReport shot = shotgun.LastShot;
             if (shot.Time > 0f)
             {

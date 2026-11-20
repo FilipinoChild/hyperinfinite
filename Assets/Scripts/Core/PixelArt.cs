@@ -40,6 +40,31 @@ namespace HyperInfinite
         public static Sprite BossMark => Get("Boss Mark", 0, BossMarkRows);
         /// <summary>The two eyes that fill the holes in BossMark, so they can be tinted their own color.</summary>
         public static Sprite BossEyes => Get("Boss Eyes", 0, BossEyesRows);
+        /// <summary>A small heart, for healing.</summary>
+        public static Sprite Heart => Get("Heart", 0, HeartRows);
+        /// <summary>The shine on the heart's upper left, so it can be tinted its own color.</summary>
+        public static Sprite HeartShine => Get("Heart Shine", 0, HeartShineRows);
+
+        /// <summary>The heart's shape, shared with the heart shards so the two always match.</summary>
+        internal static readonly string[] HeartRows =
+        {
+            ".##.##.",
+            "#######",
+            "#######",
+            ".#####.",
+            "..###..",
+            "...#...",
+        };
+
+        internal static readonly string[] HeartShineRows =
+        {
+            ".......",
+            ".##....",
+            ".#.....",
+            ".......",
+            ".......",
+            ".......",
+        };
 
         static readonly string[] OutlineRows =
         {

@@ -20,6 +20,8 @@ namespace HyperInfinite
         public UnityEvent onDied = new UnityEvent();
         [Tooltip("Back on its feet after Revive.")]
         public UnityEvent onRevived = new UnityEvent();
+        [Tooltip("Sent with the health actually given back, so nothing is sent at full health.")]
+        public UnityEvent<float> onHealed = new UnityEvent<float>();
 
         /// <summary>
         /// Raised when anything with Health dies, with the Health that died, so kills can be counted (for power-up
@@ -60,7 +62,9 @@ namespace HyperInfinite
         public void Heal(float amount)
         {
             if (IsDead || amount <= 0f) return;
+            float before = current;
             current = Mathf.Min(maxHealth, current + amount);
+            if (current > before) onHealed.Invoke(current - before);
         }
 
         /// <summary>
