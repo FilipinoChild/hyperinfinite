@@ -159,6 +159,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 59f668d38ea43e64083170a017afd579, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.FaceCamera
+  walk: 1
+  stepsPerMeter: 0.9
+  rock: 6
+  bounce: 0.07
+  framesPerSecond: 12
 --- !u!1 &7358320864006206928
 GameObject:
   m_ObjectHideFlags: 0
@@ -262,6 +267,8 @@ GameObject:
   - component: {fileID: 7770887018396177004}
   - component: {fileID: 3873897769239089763}
   - component: {fileID: 6433827646341088479}
+  - component: {fileID: 987299900388119795}
+  - component: {fileID: 7928330042337409579}
   m_Layer: 0
   m_Name: Scuttler
   m_TagString: Untagged
@@ -304,6 +311,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   onDied:
+    m_PersistentCalls:
+      m_Calls: []
+  onRevived:
     m_PersistentCalls:
       m_Calls: []
 --- !u!114 &7770887018396177004
@@ -362,5 +372,35 @@ MonoBehaviour:
   pounceHeight: 3.2
   attackDamage: 12
   attackCooldown: 1.2
+  biteWindup: 0.3
   body: {fileID: 6043961502824655302}
   pounceTime: 0.35
+--- !u!114 &987299900388119795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9152386093921851600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ce55104b4a823143a4fa61f7e59729d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.PowerUpDropper
+  pickupPrefab: {fileID: 5278391260968593620, guid: 69c4259f31bd57b47a19e9b9b79bb253, type: 3}
+  dropChance: 0.15
+--- !u!114 &7928330042337409579
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9152386093921851600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59a3d1f019aca6d46b82f726b76a92d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.Burnable
+  burnDuration: 3
+  burnDamagePerTick: 4
+  tickInterval: 0.5

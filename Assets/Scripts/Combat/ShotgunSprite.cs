@@ -10,6 +10,7 @@ namespace HyperInfinite
     /// drops and tilts while venting or overheated, and falls out of sight when you go down. Its emitter cells glow with the gun's charge and heat
     /// (EnergyBlastShotgun.GlowColor), a pixel burst flashes at the muzzle on every blast, and the muzzle
     /// Transform is kept on the sprite's muzzle so the bolts start from it.
+    /// While the INFINITE power-up is active, a gold aura pulses behind the gun and the gun is tinted gold.
     ///
     /// Put it next to EnergyBlastShotgun, under the camera. It makes its own screen-space canvas, so the
     /// gun never pokes into walls. The texture needs Read/Write switched on for the emitter glow, and
@@ -46,6 +47,14 @@ namespace HyperInfinite
         [Tooltip("Degrees the gun leans when strafing at full speed.")]
         [SerializeField, Range(0f, 15f)] float strafeLean = 3.5f;
 
+        [Header("INFINITE power-up look")]   // INFINITE
+        [Tooltip("Color of the aura and tint while INFINITE is active.")]
+        [SerializeField] Color infiniteColor = new Color(1f, 0.75f, 0.15f);
+        [Tooltip("How much bigger than the gun the aura is. 1.08 = 8% bigger.")]
+        [SerializeField, Range(1f, 1.3f)] float auraSize = 1.08f;
+        [Tooltip("How strongly the gun itself is tinted. 1 = fully gold.")]
+        [SerializeField, Range(0f, 1f)] float tintStrength = 0.6f;
+
         // From the prototype: the gun rotates around a point 80% of the way across its bottom edge.
         static readonly Vector2 Pivot = new Vector2(0.8f, 0f);
         const float FullGlow = 2.4f;   // GlowColor's brightest channel when fully charged
@@ -58,10 +67,10 @@ namespace HyperInfinite
         Camera view;
         Canvas canvas;
         RectTransform gun;
-        RawImage body, glow;
+        RawImage body, glow, aura;                          // INFINITE: added aura
         Image flash;
         RectTransform flashRect;
-        Texture2D bodyTexture, glowTexture;
+        Texture2D bodyTexture, glowTexture, auraTexture;    // INFINITE: added auraTexture
         float bobTime, bobAmount, down, dropped, lean, lift;
         Vector2 trailing;
 
@@ -98,11 +107,13 @@ namespace HyperInfinite
             if (canvas) Destroy(canvas.gameObject);
             if (bodyTexture && bodyTexture != sprite) Destroy(bodyTexture);
             if (glowTexture) Destroy(glowTexture);
+            if (auraTexture) Destroy(auraTexture);   // INFINITE
         }
 
         /// <summary>
         /// Splits the art in two: the gun with its emitter cells darkened, and a white mask of just those cells,
-        /// which is tinted with the glow. Needs Read/Write on the texture; without it the gun is drawn as it is.
+        /// which is tinted with the glow. Also makes a white silhouette of the whole gun for the INFINITE aura.
+        /// Needs Read/Write on the texture; without it the gun is drawn as it is.
         /// </summary>
         void SplitGlow()
         {
@@ -115,9 +126,11 @@ namespace HyperInfinite
             }
             Color32[] pixels = sprite.GetPixels32();
             var mask = new Color32[pixels.Length];
+            var silhouette = new Color32[pixels.Length];   // INFINITE: the gun's outline, all white
             for (int i = 0; i < pixels.Length; i++)
             {
                 Color32 p = pixels[i];
+                silhouette[i] = new Color32(255, 255, 255, p.a > 128 ? (byte)255 : (byte)0);   // INFINITE
                 if (p.a > 128 && p.b > 150 && p.b - p.r > 60)   // the cyan cells
                 {
                     mask[i] = new Color32(255, 255, 255, 255);
@@ -127,13 +140,16 @@ namespace HyperInfinite
             }
             bodyTexture = Pixelated(pixels, sprite.name + " (body)");
             glowTexture = Pixelated(mask, sprite.name + " (glow)");
+            auraTexture = Pixelated(silhouette, sprite.name + " (aura)");   // INFINITE
         }
 
         Texture2D Pixelated(Color32[] pixels, string textureName)
         {
             var texture = new Texture2D(sprite.width, sprite.height, TextureFormat.RGBA32, false)
             {
-                name = textureName, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp,
+                name = textureName,
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
             };
             texture.SetPixels32(pixels);
             texture.Apply(false, true);
@@ -147,6 +163,20 @@ namespace HyperInfinite
             canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = -50;   // under any HUD
+
+            // INFINITE: the aura is made first so it's drawn behind the gun. It copies the gun's
+            // position and rotation every frame, and is only switched on during INFINITE.
+            if (auraTexture)
+            {
+                var auraRect = new GameObject("INFINITE Aura", typeof(RectTransform)).GetComponent<RectTransform>();
+                auraRect.SetParent(canvasObject.transform, false);
+                auraRect.anchorMin = auraRect.anchorMax = new Vector2(1f, 0f);
+                auraRect.pivot = Pivot;
+                aura = auraRect.gameObject.AddComponent<RawImage>();
+                aura.texture = auraTexture;
+                aura.raycastTarget = false;
+                aura.enabled = false;
+            }
 
             gun = new GameObject("Gun", typeof(RectTransform)).GetComponent<RectTransform>();
             gun.SetParent(canvasObject.transform, false);
@@ -219,7 +249,12 @@ namespace HyperInfinite
             // The prototype tips it back (counterclockwise) for each of these: a positive angle in UI space.
             gun.localRotation = Quaternion.Euler(0f, 0f, kickPixels / px * 0.12f + lever * 10f + down * 14f - lean);
 
+            // INFINITE: one pulse value (0 to 1) shared by the aura, the tint, and the flash
+            bool supercharged = shotgun.Supercharged;
+            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 12f);
+
             Color tint = shotgun.IsOverheated ? new Color(1f, 0.72f, 0.6f) : Color.Lerp(Color.white, new Color(1f, 0.93f, 0.86f), shotgun.Heat01);
+            if (supercharged) tint = Color.Lerp(Color.white, infiniteColor, tintStrength * (0.7f + 0.3f * pulse));   // INFINITE
             body.color = tint;
             if (glow)
             {
@@ -230,7 +265,23 @@ namespace HyperInfinite
                 glow.color = hue;
             }
 
-            // Two frames of flash: a big white burst, then a smaller cyan one.
+            // INFINITE: the aura follows the gun, slightly bigger, pulsing in size and brightness
+            if (aura)
+            {
+                aura.enabled = supercharged && dropped < 1f;
+                if (aura.enabled)
+                {
+                    RectTransform a = aura.rectTransform;
+                    a.sizeDelta = gun.sizeDelta * (auraSize + 0.03f * pulse);
+                    a.anchoredPosition = gun.anchoredPosition;
+                    a.localRotation = gun.localRotation;
+                    Color c = infiniteColor;
+                    c.a = 0.45f + 0.35f * pulse;
+                    aura.color = c;
+                }
+            }
+
+            // Two frames of flash: a big white burst, then a smaller cyan one (gold during INFINITE).
             ShotReport shot = shotgun.LastShot;
             float sinceShot = Time.time - shot.Time;
             bool flashing = shot.Bolts > 0 && sinceShot < FlashTime;
@@ -239,7 +290,7 @@ namespace HyperInfinite
             {
                 bool first = sinceShot < FlashTime * 0.5f;
                 flashRect.sizeDelta = Vector2.one * (gunHeight * (first ? 0.5f : 0.32f));
-                flash.color = first ? Palette.White : Palette.Cyan;
+                flash.color = first ? Palette.White : (supercharged ? Palette.Yellow : Palette.Cyan);   // INFINITE
             }
 
             if (muzzle && view)

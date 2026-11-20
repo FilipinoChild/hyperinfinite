@@ -89,6 +89,8 @@ namespace HyperInfinite
         [Tooltip("Close to overheating.")]
         [SerializeField, ColorUsage(false, true)] Color hotGlow = new Color(2.6f, 0.75f, 0.15f);
         [SerializeField, ColorUsage(false, true)] Color overheatGlow = new Color(3.5f, 0.25f, 0.08f);
+        [Tooltip("Glow while the INFINITE power-up is active.")]
+        [SerializeField, ColorUsage(false, true)] Color infiniteGlow = new Color(2.6f, 1.6f, 0.2f);
 
         [Header("Effects")]
         [Tooltip("How brightly the muzzle light flashes on each blast.")]
@@ -126,6 +128,10 @@ namespace HyperInfinite
         public float Spread => Mathf.Lerp(hipSpread, aimSpread, AimBlend);
         public bool IsCycling => cycleTimer > 0f;
         public bool IsOverheated => overheatTimer > 0f;
+        /// Multiplies the heat each shot adds. The INFINITE power-up sets it to 0.
+        public float HeatMultiplier { get; set; } = 1f;
+        /// True while the INFINITE power-up is active. Set by InfiniteBuff.
+        public bool Supercharged { get; set; }
         public bool IsVenting => venting;
         public bool CanFire => !IsCycling && !IsOverheated && !venting;
         /// <summary>0 cold, 1 about to overheat.</summary>
@@ -231,7 +237,7 @@ namespace HyperInfinite
             cycleTimer = cycleTime;
             Kick = 1f;
             flash = flashIntensity;
-            heat = Mathf.Min(100f, heat + heatPerShot);
+            heat = Mathf.Min(100f, heat + heatPerShot * HeatMultiplier);
             bool overheatedNow = heat >= 100f;   // the blast that overheats still goes off
             if (overheatedNow) overheatTimer = overheatLockout;
 
@@ -259,7 +265,7 @@ namespace HyperInfinite
                     }
                     else PixelFx.Sparks(hit.point, hit.normal, Palette.PaleCyan, 2, 6f, 0.22f);
                 }
-                PixelFx.Bolt(NextEmitter().position, end, Palette.Cyan, 0.06f, 0.11f);
+                PixelFx.Bolt(NextEmitter().position, end, Supercharged ? Palette.Yellow : Palette.Cyan, 0.06f, 0.11f);   // gold bolts during INFINITE
             }
 
             // One hit per target with all its bolts added up, so a target sees the whole blast at once.
@@ -330,6 +336,7 @@ namespace HyperInfinite
                 float charge = cycleTimer > 0f && cycleTime > 0f ? 1f - cycleTimer / cycleTime : 1f;
                 glow *= Mathf.Lerp(0.25f, 1f, charge);
             }
+            if (Supercharged) glow = infiniteGlow * (0.8f + 0.2f * Mathf.Sin(Time.time * 12f));   // pulses gold during INFINITE
             GlowColor = glow;
         }
 
