@@ -44,7 +44,7 @@ namespace HyperInfinite
 
         static PlayArea current;
         PlayerMotor player;
-        float nextSearch, nextNudge;
+        float nextSearch, nextNudge, lastY, stillFor;
 
         /// <summary>The play area of the scene that's running, if it has one.</summary>
         public static PlayArea Current => current;
@@ -81,18 +81,41 @@ namespace HyperInfinite
                 player = FindAnyObjectByType<PlayerMotor>();
                 if (!player) return;
             }
-            if (!player.IsGrounded || Time.time < nextNudge) return;
             Vector3 feet = player.transform.position;
-            if (feet.y - transform.position.y <= perchHeight) return;
+            bool still = Mathf.Abs(feet.y - lastY) < 0.02f;
+            lastY = feet.y;
+            if (feet.y - transform.position.y <= perchHeight)
+            {
+                stillFor = 0f;
+                return;
+            }
+            stillFor = still ? stillFor + Time.deltaTime : 0f;
+            if (Time.time < nextNudge || player.IsDashing) return;   // a level air dash passes through, it doesn't stand
+            if (!Resting(feet)) return;
 
             nextNudge = Time.time + 0.12f;
             Vector3 inward = transform.position - feet;
             inward.y = 0f;
             if (inward.sqrMagnitude < 1f) inward = player.transform.forward;   // right in the middle: any way off will do
             inward.y = 0f;
-            // A hop as well as a shove: on the ground the motor soaks up sideways speed, in the air it carries.
-            player.Push(inward.normalized * slideSpeed + Vector3.up * 3f);
+            // A hop as well as a shove: on the ground the motor soaks up sideways speed, in the air it carries. The hop
+            // sets the climb outright, so being wedged (when the motor's fall speed keeps building) doesn't swallow it.
+            player.Launch(3f);
+            player.Push(inward.normalized * slideSpeed);
             PixelFx.Burst(feet + Vector3.up * 0.1f, Palette.Steel, Palette.Dim, 6, 2.5f, 0.3f, 0.06f);   // grit kicked off the edge
+        }
+
+        /// <summary>
+        /// True if something up here is holding the player: the motor says they're on the ground, something solid is
+        /// right under their feet, or they've stayed at the same height for a moment. The last two catch the tip of a
+        /// spire or a crack between steep rock faces, which hold you up without the character controller calling it
+        /// ground. A jump's peak passes in a tenth of a second, so it doesn't count.
+        /// </summary>
+        bool Resting(Vector3 feet)
+        {
+            if (player.IsGrounded || stillFor > 0.25f) return true;
+            return Physics.SphereCast(feet + Vector3.up * 0.45f, 0.35f, Vector3.down, out RaycastHit _, 0.55f,
+                                      Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
         }
 
         /// <summary>True if <paramref name="point"/> is inside the walls, give or take the margin. Height doesn't count.</summary>
