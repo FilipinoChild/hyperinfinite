@@ -549,6 +549,8 @@ namespace HyperInfinite
         {
             var life = c.GetComponentInParent<Health>();
             if (!life || life.IsDead) return;   // eggs, webs and hatchlings go at the first hit anyway
+            var bigback = c.GetComponentInParent<BigbackAI>();
+            if (bigback && !bigback.IsRearSource(player.position)) return;
             int slot = -1;
             float oldest = float.PositiveInfinity;
             for (int i = 0; i < MaxBrands; i++)
@@ -704,6 +706,12 @@ namespace HyperInfinite
 
         void Hit(IDamageable target, float amount, Vector3 point, Vector3 direction, float distance)
         {
+            if (target is Component armorTarget && armorTarget.TryGetComponent(out BigbackAI bigback)
+                && !bigback.IsRearSource(player.position))
+            {
+                bigback.ArmorFeedback(point);
+                return;
+            }
             LastHitTime = Time.time;
             Health life = null;
             if (target is Component part)

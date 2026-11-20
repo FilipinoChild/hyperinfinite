@@ -29,6 +29,7 @@ namespace HyperInfinite
         /// </summary>
         public static event System.Action<Health> AnyDied;
 
+        BigbackAI bigback;
         float current;
         float immuneUntil = -1f;
 
@@ -42,11 +43,19 @@ namespace HyperInfinite
         void Awake()
         {
             current = maxHealth;
+            bigback = GetComponent<BigbackAI>();
         }
 
         public void TakeDamage(DamageInfo damage)
         {
             if (IsDead || damage.Amount <= 0f || Time.time < immuneUntil) return;
+            if (bigback && !bigback.AllowsDamage(damage))
+            {
+                bigback.ArmorFeedback(damage.Point);
+                return;
+            }
+            // Only a valid rear hit reaches here; dazed Bigbacks take extra damage without losing their armor.
+            if (bigback) damage.Amount *= bigback.IncomingDamageMultiplier;
             current = Mathf.Max(0f, current - damage.Amount);
             immuneUntil = Time.time + hitImmunity;
             LastDamage = damage;

@@ -2150,6 +2150,11 @@ MonoBehaviour:
   spittersPerPack: 5
   spitterGrowth: 5
   maxSpittersPerPack: 20
+  spitterSpacing: 2
+  bigbackPrefab: {fileID: 9152386093921851600, guid: eeb8db1a6adb4ec39b811dab85cdcfbf, type: 3}
+  bigbacksFromPack: 3
+  bigbacksPerPack: 1
+  maxBigbacksPerPack: 2
   onPackSpawned:
     m_PersistentCalls:
       m_Calls: []
@@ -2168,6 +2173,9 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
+  onWaveCleared:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!4 &927568836
 Transform:
   m_ObjectHideFlags: 0

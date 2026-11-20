@@ -51,6 +51,16 @@ namespace HyperInfinite
         [Tooltip("How far apart Spitters stand when they appear, in meters. A big group fills rings around the spawn point.")]
         [SerializeField, Min(0.5f)] float spitterSpacing = 2f;
 
+        [Header("Armored support")]
+        [Tooltip("Bigback prefab. Leave empty to disable armored enemies.")]
+        [SerializeField] GameObject bigbackPrefab;
+        [SerializeField, Min(1)] int bigbacksFromPack = 3;
+        [SerializeField, Min(0)] int bigbacksPerPack = 1;
+        [SerializeField, Min(0)] int maxBigbacksPerPack = 2;
+
+        int BigbackCount(int index) => bigbackPrefab && index + 1 >= bigbacksFromPack
+            ? Mathf.Min(maxBigbacksPerPack, bigbacksPerPack + (index + 1 - bigbacksFromPack) / 2) : 0;
+
         [Header("Events")]
         [Tooltip("Sent with the pack number, starting at 1.")]
         public UnityEvent<int> onPackSpawned = new UnityEvent<int>();
@@ -125,7 +135,7 @@ namespace HyperInfinite
             }
 
             // The next pack comes once the last is down to a few, and there's room for it under the cap.
-            int next = PackSize(packsSpawned);
+            int next = PackSize(packsSpawned) + BigbackCount(packsSpawned);
             bool room = alive.Count <= nextPackWhenLeft && (alive.Count == 0 || alive.Count + next <= maxAlive);
             if (!room)
             {
@@ -214,6 +224,41 @@ namespace HyperInfinite
                 }
             }
 
+            // Use the same NavMesh and play-area checks as the other enemies.
+            // Keep Bigbacks in the pack records so wave completion and drops include them.
+            int bigbacks = BigbackCount(packsSpawned);
+            int armoredSpawned = 0;
+            if (spitterCount == 0) placed.Clear();
+            for (int i = 0; i < bigbacks; i++)
+            {
+                int pointIndex = (first + i) % count;
+                Transform point = spawnPoints[pointIndex];
+                Vector3 anchor = Anchor(point);
+                Vector3 position = anchor;
+                bool found = false;
+                for (int ring = 1; ring <= 3 && !found; ring++)
+                {
+                    for (int k = 0; k < 8; k++)
+                    {
+                        float angle = (k + i * 3) * Mathf.PI / 4f;
+                        Vector3 wanted = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (clusterRadius + ring * 2f);
+                        if (Walkable(anchor, wanted, out Vector3 spot) && Clear(spot, 2f))
+                        {
+                            position = spot;
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                // If no separated spot exists, fall back to the anchor only if it is valid.
+                if (!found && !Walkable(anchor, anchor, out position)) continue;
+                GameObject bigback = Instantiate(bigbackPrefab, position, point.rotation);
+                placed.Add(position);
+                alive.Add(bigback);
+                lastPack.Add(bigback);
+                armoredSpawned++;
+            }
+
             packsSpawned++;
             PackRecord record = spareRecords.Count > 0 ? spareRecords.Pop() : new PackRecord();
             record.wave = packsSpawned;
@@ -221,7 +266,7 @@ namespace HyperInfinite
             record.members.AddRange(lastPack);
             packs.Add(record);
             onPackSpawned.Invoke(packsSpawned);
-            Debug.Log("Pack " + packsSpawned + ": " + size + " Scuttlers, " + spitterCount + " Spitters");
+            Debug.Log("Pack " + packsSpawned + ": " + size + " Scuttlers, " + spitterCount + " Spitters, " + armoredSpawned + " Bigbacks");
         }
 
         /// <summary>The spawn point's place on the NavMesh, which every newcomer from it must be able to walk to.</summary>

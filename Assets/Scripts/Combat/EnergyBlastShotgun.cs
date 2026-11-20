@@ -344,6 +344,8 @@ namespace HyperInfinite
 
             pending.Clear();
             int landed = 0;
+            float reflectedDamage = 0f;
+            BigbackAI reflectingEnemy = null;
             for (int i = 0; i < bolts; i++)
             {
                 Vector2 offset = Random.insideUnitCircle * spread;   // spread evenly over the cone
@@ -353,7 +355,12 @@ namespace HyperInfinite
                 {
                     end = hit.point;
                     var target = hit.collider.GetComponentInParent<IDamageable>();
-                    if (target != null)
+                    var bigback = hit.collider.GetComponentInParent<BigbackAI>();
+                    if (bigback && bigback.TryDeflect(hit, dir, DamageAt(hit.distance), range - hit.distance, shooter, out float returned))
+                    {
+                        if (returned > 0f) { reflectedDamage += returned; reflectingEnemy = bigback; }
+                    }
+                    else if (target != null)
                     {
                         Add(target, hit, DamageAt(hit.distance));
                         landed++;
@@ -390,6 +397,16 @@ namespace HyperInfinite
                     report.Target = p.name;
                 }
             }
+            // A reflected blast damages the shooter only when its return ray actually reached them.
+            // Cap a single reflected volley so a close-range mistake is punishable, not an instant death.
+            if (reflectedDamage > 0f && health && reflectingEnemy)
+                health.TakeDamage(new DamageInfo
+                {
+                    Amount = Mathf.Min(24f, reflectedDamage), Kind = DamageKind.Hazard,
+                    Point = origin, Direction = (origin - reflectingEnemy.transform.position).normalized,
+                    Distance = Vector3.Distance(origin, reflectingEnemy.transform.position), Hits = 1,
+                    Source = reflectingEnemy.gameObject,
+                });
             LastShot = report;
             if (hitEnemy) hitHeat = Mathf.Min(heat, hitHeat + added);
             onFire.Invoke();
