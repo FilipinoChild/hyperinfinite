@@ -48,7 +48,7 @@ namespace HyperInfinite
         PlayerControls controls;
         EnergyBlastShotgun shotgun;
         Vector3 safePosition;
-        float safeYaw, safeTimer;
+        float safeYaw, safeTimer, lastY, perchedFor;
         float downAt, protectedUntil = -1f;
 
         /// <summary>True from going down until respawning.</summary>
@@ -85,14 +85,24 @@ namespace HyperInfinite
         void Update()
         {
             PlayArea area = PlayArea.Current;
-            bool inside = !area || area.Contains(transform.position);
-            if (transform.position.y < killHeight || !inside)
+            Vector3 feet = transform.position;
+            bool inside = !area || area.Contains(feet);
+            if (feet.y < killHeight || !inside)
             {
                 BackToSolidGround();
                 return;
             }
-            // Remember where you last stood, a few times a second; only ever inside the arena.
-            if (!motor || !motor.IsGrounded || health.IsDead) return;
+            bool high = area && area.IsHigh(feet);
+            if (Perched(high, feet.y, area))
+            {
+                // Out of every enemy's reach for too long: back down to where you last stood, in one move.
+                PixelFx.Burst(feet + Vector3.up * 0.2f, Palette.Steel, Palette.Dim, 10, 3f, 0.35f, 0.08f);
+                BackToSolidGround();
+                PixelFx.Ring(safePosition + Vector3.up * 0.05f, 1.2f, Palette.Cyan, 16, 0.3f, 0.14f);
+                return;
+            }
+            // Remember where you last stood, a few times a second; only ever inside the arena, and never up high.
+            if (!motor || !motor.IsGrounded || health.IsDead || high) return;
             safeTimer -= Time.deltaTime;
             if (safeTimer > 0f) return;
             safeTimer = 0.25f;
@@ -161,6 +171,26 @@ namespace HyperInfinite
                 away = distance > 0.01f ? away / distance : transform.forward;
                 pushable.Push(away * (burstPush * (1f - 0.5f * Mathf.Clamp01(distance / burstRadius))));
             }
+        }
+
+        /// <summary>
+        /// True once you've rested higher than anything can reach for the play area's grace time: on the ground up
+        /// there, or not moving up or down at all, which catches being wedged on a spire tip or in a crack between
+        /// steep faces, where the controller holds you without calling it ground. A jump or an air dash resets it.
+        /// </summary>
+        bool Perched(bool high, float y, PlayArea area)
+        {
+            bool still = Mathf.Abs(y - lastY) < 0.3f * Time.deltaTime;   // under 0.3 m/s up or down, whatever the frame rate
+            lastY = y;
+            if (!high || !motor || health.IsDead || motor.IsDashing)
+            {
+                perchedFor = 0f;
+                return false;
+            }
+            perchedFor = motor.IsGrounded || still ? perchedFor + Time.deltaTime : 0f;
+            if (perchedFor < area.PerchGrace) return false;
+            perchedFor = 0f;
+            return true;
         }
 
         void BackToSolidGround()
