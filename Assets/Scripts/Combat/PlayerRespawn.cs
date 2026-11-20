@@ -34,7 +34,7 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float burstPush = 14f;
 
         [Header("Falling out of the level")]
-        [Tooltip("Falling below this height puts you back on the last solid ground you stood on.")]
+        [Tooltip("Falling below this height puts you back on the last solid ground you stood on. So does getting outside the scene's PlayArea, if it has one.")]
         [SerializeField] float killHeight = -20f;
 
         [Header("Events (hook sounds up here)")]
@@ -84,12 +84,14 @@ namespace HyperInfinite
 
         void Update()
         {
-            if (transform.position.y < killHeight)
+            PlayArea area = PlayArea.Current;
+            bool inside = !area || area.Contains(transform.position);
+            if (transform.position.y < killHeight || !inside)
             {
                 BackToSolidGround();
                 return;
             }
-            // Remember where you last stood, a few times a second.
+            // Remember where you last stood, a few times a second; only ever inside the arena.
             if (!motor || !motor.IsGrounded || health.IsDead) return;
             safeTimer -= Time.deltaTime;
             if (safeTimer > 0f) return;
