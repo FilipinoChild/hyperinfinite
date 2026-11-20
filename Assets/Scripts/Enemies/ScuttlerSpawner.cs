@@ -41,6 +41,10 @@ namespace HyperInfinite
         [SerializeField, Min(1)] int spittersFromPack = 2;
         [SerializeField, Min(0)] int spittersPerPack = 1;
 
+        [Tooltip("How many more Spitters each new pack has.")]
+        [SerializeField, Min(0)] int spitterGrowth = 1;
+        [SerializeField, Min(0)] int maxSpittersPerPack = 4;
+
         [Header("Events")]
         [Tooltip("Sent with the pack number, starting at 1.")]
         public UnityEvent<int> onPackSpawned = new UnityEvent<int>();
@@ -150,10 +154,13 @@ namespace HyperInfinite
             if (spitterPrefab && packsSpawned + 1 >= spittersFromPack)
             {
                 Transform spitterPoint = spawnPoints[first];
-                for (int i = 0; i < spittersPerPack; i++)
+                // How many Spitters this pack gets: starts at Spitters Per Pack, then grows each pack
+                int packsWithSpitters = packsSpawned + 1 - spittersFromPack;
+                int spitterCount = Mathf.Min(maxSpittersPerPack, spittersPerPack + spitterGrowth * packsWithSpitters);
+                for (int i = 0; i < spitterCount; i++)
                 {
                     Vector3 spot = spitterPoint.position - spitterPoint.forward * 3f
-                                 + spitterPoint.right * (i * 2f - (spittersPerPack - 1));
+                                 + spitterPoint.right * (i * 2f - (spitterCount - 1));
                     if (NavMesh.SamplePosition(spot, out NavMeshHit spitterHit, 3f, NavMesh.AllAreas))
                         spot = spitterHit.position;
                     GameObject spitter = Instantiate(spitterPrefab, spot, spitterPoint.rotation);
