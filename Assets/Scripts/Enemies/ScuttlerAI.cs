@@ -68,7 +68,6 @@ namespace HyperInfinite
 
         Vector3 bodyRest;            // where the body sits when not pouncing
         float pounceTimer, pounceArc;
-        float chitterTimer = 2f;
         FaceCamera sprite;           // shows the body's sprite: it crouches, stretches and flashes
         float windupTimer;
         bool windingUp;              // true during the warning before a bite
@@ -117,7 +116,6 @@ namespace HyperInfinite
             repathTimer -= dt;
             attackTimer -= dt;
             AnimatePounce(dt);
-            Chitter(dt);
 
             // While scattering, keep running and don't bite
             if (scatterTimer > 0f)
@@ -242,7 +240,6 @@ namespace HyperInfinite
             windingUp = true;
             windupTimer = biteWindup;
             if (sprite) sprite.Squash = -0.3f;     // crouched, ready to spring
-            Sfx.At(Sound.ScuttlerWindup, transform.position);   // a hiss: the warning you can hear behind you
         }
 
         void CancelBite()
@@ -259,7 +256,6 @@ namespace HyperInfinite
         void Bite(float flatDistance, float heightAbove)
         {
             windingUp = false;
-            Sfx.At(Sound.ScuttlerBite, transform.position);
             if (sprite)
             {
                 sprite.Tint = Color.white;
@@ -283,16 +279,6 @@ namespace HyperInfinite
                 Hits = 1,
                 Source = gameObject,
             });
-        }
-
-        /// Now and then each Scuttler clicks and chitters, so a pack can be heard closing in. Sfx keeps only a few
-        /// going at once however big the pack.
-        void Chitter(float dt)
-        {
-            chitterTimer -= dt;
-            if (chitterTimer > 0f) return;
-            chitterTimer = Random.Range(3f, 8f);
-            Sfx.At(Sound.ScuttlerChitter, transform.position);
         }
 
         /// Moves the visible body up and back down in an arc while pouncing.

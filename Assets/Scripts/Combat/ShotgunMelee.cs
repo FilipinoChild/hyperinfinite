@@ -737,7 +737,6 @@ namespace HyperInfinite
             ApplyBrand(c, target);
             PixelFx.Flash(point, Palette.PaleCyan, 0.5f, 0.06f);
             PixelFx.Cone(point, throwVelocity, 40f, Palette.Cyan, Palette.White, 8, 5f, 0.3f, 0.1f);
-            Sfx.At(Sound.RamHit, point);
         }
 
         static void Shove(Collider c, Vector3 velocity)

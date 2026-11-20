@@ -14,7 +14,7 @@ namespace HyperInfinite
     /// TitleMenu adds it to the title screen's buttons.
     /// </summary>
     [DisallowMultipleComponent]
-    public class MenuButton : MonoBehaviour, IPointerEnterHandler, ISelectHandler, IDeselectHandler, IPointerClickHandler, ISubmitHandler
+    public class MenuButton : MonoBehaviour, IPointerEnterHandler, ISelectHandler, IDeselectHandler
     {
         [Tooltip("Shown only while this button is selected. Optional.")]
         [SerializeField] Graphic marker;
@@ -24,7 +24,6 @@ namespace HyperInfinite
         [SerializeField] Color selectedLabelColor = Color.white;
 
         Selectable selectable;
-        float shownAt;
 
         /// <summary>For buttons made in code: what to show and brighten while selected.</summary>
         public void SetUp(Graphic marker, Graphic label, Color labelColor, Color selectedLabelColor)
@@ -43,7 +42,6 @@ namespace HyperInfinite
 
         void OnEnable()
         {
-            shownAt = Time.unscaledTime;
             EventSystem current = EventSystem.current;
             Show(current && current.currentSelectedGameObject == gameObject);
         }
@@ -57,17 +55,6 @@ namespace HyperInfinite
         public void OnSelect(BaseEventData eventData)
         {
             Show(true);
-            // A blip as the highlight moves, but not for the button a menu starts on as it opens.
-            if (Time.unscaledTime - shownAt > 0.1f) Sfx.Play(Sound.UiMove);
-        }
-
-        public void OnPointerClick(PointerEventData eventData) => Pressed();
-        public void OnSubmit(BaseEventData eventData) => Pressed();
-
-        void Pressed()
-        {
-            if (selectable && !selectable.IsInteractable()) return;
-            Sfx.Play(Sound.UiSelect);
         }
 
         public void OnDeselect(BaseEventData eventData)

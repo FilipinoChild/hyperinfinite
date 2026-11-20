@@ -194,7 +194,6 @@ namespace HyperInfinite
             PixelFx.Ring(transform.position, burstRadius, gooColor, 20, 0.3f);   // how far the eruption reaches
             Splash(center);
             SpawnSwarm();
-            Sfx.At(Sound.EggErupt, center);
             onErupt.Invoke();
         }
 
@@ -232,7 +231,6 @@ namespace HyperInfinite
             State = EggState.Swelling;
             Disturbance = 1f;
             warningTimer = warningTime;
-            Sfx.At(Sound.EggSwell, transform.position);
             onSwelling.Invoke();
             if (warningTime <= 0f) Erupt();
         }
