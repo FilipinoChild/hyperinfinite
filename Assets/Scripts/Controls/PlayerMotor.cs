@@ -81,6 +81,8 @@ namespace HyperInfinite
         public float DashCooldownLeft => Mathf.Max(0f, dashCooldownTimer);
         public int AirJumpsLeft => Mathf.Max(0, airJumps - airJumpsUsed);
         public float RunSpeed => runSpeed;
+        /// <summary>Running and dashing speed is multiplied by this: above 1 while a power-up boosts the suit.</summary>
+        public float SpeedScale { get; set; } = 1f;
         /// <summary>Downward pull in meters per second per second, for working out launch speeds.</summary>
         public float Gravity => gravity;
         /// <summary>True while something sticky has hold of the player: slowed, and unable to jump.</summary>
@@ -108,6 +110,7 @@ namespace HyperInfinite
             bool snared = IsSnared;
             float pace = snared ? snareScale : 1f;
             if (Time.time < slowedUntil) pace = Mathf.Min(pace, slowScale);
+            pace *= SpeedScale;
             if (snared) jumpBufferTimer = 0f;
 
             if (controls && controls.DashPressed && dashCooldownTimer <= 0f) StartDash(wish);
@@ -196,6 +199,12 @@ namespace HyperInfinite
             slowedUntil = Mathf.Max(slowedUntil, Time.time + holdFor);
         }
 
+        /// <summary>Whatever was slowing the player (Slow) stops at once.</summary>
+        public void EndSlow()
+        {
+            slowedUntil = -1f;
+        }
+
         /// <summary>
         /// Throws the player upward at <paramref name="upwardSpeed"/> meters per second, whatever they were doing
         /// before, so it works just as well mid-fall. Their double jump is kept.
@@ -219,6 +228,12 @@ namespace HyperInfinite
             dashDirection = direction.normalized;
             burstSpeed = speed;
             dashTimer = seconds;
+        }
+
+        /// <summary>The dash is ready again at once.</summary>
+        public void RefundDash()
+        {
+            dashCooldownTimer = 0f;
         }
 
         /// <summary>Knock-back from blasts, in meters per second. An upward push lifts you off the ground.</summary>

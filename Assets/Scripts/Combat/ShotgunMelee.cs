@@ -130,6 +130,8 @@ namespace HyperInfinite
         public UnityEvent onBrandBurst = new UnityEvent();
         [Tooltip("Sent with the kick in degrees, for the camera.")]
         public UnityEvent<float> onRecoil = new UnityEvent<float>();
+        [Tooltip("A heavy bash killed something, counting its brand bursts. Sent with how many it killed.")]
+        public UnityEvent<int> onHeavyKills = new UnityEvent<int>();
 
         struct Brand
         {
@@ -150,11 +152,14 @@ namespace HyperInfinite
         GameObject markHolder;
         Material markMaterial;
         readonly List<IDamageable> struck = new List<IDamageable>(16);
+        int kills;          // what the heavy bash under way has killed so far
+        Vector3 killSum;
         readonly List<Collider> struckBy = new List<Collider>(16);
         EnergyBlastShotgun shotgun;
         PlayerControls controls;
         PlayerMotor motor;
         Health health;
+        HyperPower hyper;
         Transform view, player;
         float readyAt, landAt, pendingHeat;
         bool lunging, pendingOverload;
@@ -173,6 +178,11 @@ namespace HyperInfinite
         public float LastHeavyPower { get; private set; }
         /// <summary>True if the last heavy bash came from a redlined gun.</summary>
         public bool LastHeavyOverload { get; private set; }
+        /// <summary>How many the last heavy bash killed, counting its brand bursts, and the middle of where they fell.</summary>
+        public int LastHeavyKills { get; private set; }
+        public Vector3 LastHeavyKillPoint { get; private set; }
+        /// <summary>True if the last heavy bash was thrown while HYPER was on.</summary>
+        public bool LastHeavyHyper { get; private set; }
         /// <summary>When a bash or heavy bash last hurt something.</summary>
         public float LastHitTime { get; private set; } = -100f;
         /// <summary>True if the last bash connected.</summary>
@@ -191,6 +201,7 @@ namespace HyperInfinite
             var eyes = GetComponentInParent<Camera>();
             view = eyes ? eyes.transform : transform;
             player = controls ? controls.transform : transform.root;
+            hyper = GetComponentInParent<HyperPower>();
             BuildMarks();
         }
 
@@ -347,9 +358,11 @@ namespace HyperInfinite
                 Land(heat, overload, true);
                 return;
             }
-            motor.Lunge(forward, lungeSpeed, lungeTime);
+            float lunge = lungeTime * (hyper ? hyper.LungeBoost : 1f);   // HYPER: chain lunges reach further
+            motor.EndSlow();   // the charge's slowdown would otherwise linger into the lunge and shorten it
+            motor.Lunge(forward, lungeSpeed, lunge);
             lunging = true;
-            landAt = Time.time + lungeTime;
+            landAt = Time.time + lunge;
             pendingHeat = heat;
             pendingOverload = overload;
             readyAt = landAt + heavyCooldown;
@@ -362,13 +375,17 @@ namespace HyperInfinite
             LastHeavyTime = Time.time;
             LastHeavyPower = power;
             LastHeavyOverload = overload;
+            bool boosted = hyper && hyper.IsActive;
+            LastHeavyHyper = boosted;
+            kills = 0;
+            killSum = Vector3.zero;
 
             Vector3 origin = view.position, forward = view.forward;
             float damage = (heavyDamage + heavyHeatDamage * heat) * (overload ? overloadDamage : 1f);
             float push = Mathf.Lerp(heavyPush.x, heavyPush.y, power) + (overload ? overloadPush : 0f);
 
             // Aimed at the floor, close enough to touch it: the blast goes off underfoot and throws you up.
-            float reach = Mathf.Lerp(heavyRange.x, heavyRange.y, power) + (overload ? overloadReach : 0f);
+            float reach = (Mathf.Lerp(heavyRange.x, heavyRange.y, power) + (overload ? overloadReach : 0f)) * (boosted ? hyper.ReachBoost : 1f);
             RaycastHit floor = default;
             bool atFloor = mayHitFloor && forward.y < -Mathf.Sin(blastJumpPitch * Mathf.Deg2Rad)
                            && Raycasts.Nearest(origin, forward, reach + 0.5f, player, out floor, false)
@@ -377,14 +394,17 @@ namespace HyperInfinite
             else Blast(origin, forward, reach, power, damage, push, overload);
 
             int burst = Detonate(heat);
+            LastHeavyKills = kills;
+            if (kills > 0) LastHeavyKillPoint = killSum / kills;
             onHeavyBash.Invoke(power);
+            if (kills > 0) onHeavyKills.Invoke(kills);
             onRecoil.Invoke(Mathf.Lerp(2.5f, 7f, power) + (burst > 0 ? 1f : 0f));
         }
 
         /// <summary>The bash thrown forward: everything in the cone in front is hit, the hotter the harder, wider and further.</summary>
         void Blast(Vector3 origin, Vector3 forward, float reach, float power, float damage, float push, bool overload)
         {
-            float width = Mathf.Lerp(heavyWidth.x, heavyWidth.y, power) + (overload ? overloadWidth : 0f);
+            float width = Mathf.Lerp(heavyWidth.x, heavyWidth.y, power) + (overload ? overloadWidth : 0f) + (hyper ? hyper.ExtraWidth : 0f);
             Gather(origin, reach, origin);   // all round, then trimmed to the cone, so even the widest cone is covered
             int hits = 0;
             for (int i = 0; i < struck.Count; i++)
@@ -471,7 +491,7 @@ namespace HyperInfinite
         void BlastJump(Vector3 ground, float power, float damage, float push, bool overload)
         {
             int hits = 0;
-            float radius = Mathf.Lerp(blastJumpRadius.x, blastJumpRadius.y, power);
+            float radius = Mathf.Lerp(blastJumpRadius.x, blastJumpRadius.y, power) * (hyper ? hyper.ReachBoost : 1f);
             Gather(ground, radius, ground);
             for (int i = 0; i < struck.Count; i++)
             {
@@ -663,12 +683,37 @@ namespace HyperInfinite
         void Hit(IDamageable target, float amount, Vector3 point, Vector3 direction, float distance)
         {
             LastHitTime = Time.time;
-            if (target is Component part && part.TryGetComponent(out Boss boss)) amount *= boss.MeleeTaken;   // bosses shrug off most of it
+            Health life = null;
+            if (target is Component part)
+            {
+                if (part.TryGetComponent(out Boss boss)) amount *= boss.MeleeTaken;   // bosses shrug off most of it
+                part.TryGetComponent(out life);
+            }
+            bool wasAlive = life && !life.IsDead;
             target.TakeDamage(new DamageInfo
             {
                 Amount = amount, Kind = DamageKind.Melee, Point = point, Direction = direction.normalized,
                 Distance = distance, Hits = 1, Source = player.gameObject,
             });
+            if (wasAlive && life.IsDead)   // only enemies with health count, so a burst of hatchlings can't fake a multi-kill
+            {
+                kills++;
+                killSum += point;
+            }
+        }
+
+        /// <summary>
+        /// A thruster ram (HyperPower): <paramref name="target"/> takes <paramref name="damage"/>, is thrown along
+        /// <paramref name="throwVelocity"/> and is branded, with a cyan flare where it was hit.
+        /// </summary>
+        public void Ram(Collider c, IDamageable target, Vector3 throwVelocity, float damage)
+        {
+            Vector3 point = c.bounds.center;
+            Hit(target, damage, point, throwVelocity, 0f);
+            Shove(c, throwVelocity);
+            ApplyBrand(c, target);
+            PixelFx.Flash(point, Palette.PaleCyan, 0.5f, 0.06f);
+            PixelFx.Cone(point, throwVelocity, 40f, Palette.Cyan, Palette.White, 8, 5f, 0.3f, 0.1f);
         }
 
         static void Shove(Collider c, Vector3 velocity)
