@@ -80,13 +80,26 @@ namespace HyperInfinite
         public void StartFromBeginning()
         {
             LevelStart.StartAtBoss = false;
-            SceneManager.LoadScene(levelScene);
+            // The story plays over the title scene; the arena only loads after the last panel.
+            if (IntroCutscene.TryPlay(levelScene))
+            {
+                mainMenu.SetActive(false);
+                levelSelect.SetActive(false);
+                lastSelected = null;
+            }
+            else SceneManager.LoadScene(levelScene);
         }
 
         public void StartAtBoss()
         {
             LevelStart.StartAtBoss = true;
-            SceneManager.LoadScene(levelScene);
+            if (IntroCutscene.TryPlay(levelScene, true))
+            {
+                mainMenu.SetActive(false);
+                levelSelect.SetActive(false);
+                lastSelected = null;
+            }
+            else SceneManager.LoadScene(levelScene);
         }
 
         public void Quit()
