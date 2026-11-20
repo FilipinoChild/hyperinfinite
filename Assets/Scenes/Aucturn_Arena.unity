@@ -4006,6 +4006,7 @@ GameObject:
   - component: {fileID: 2037038415}
   - component: {fileID: 2037038416}
   - component: {fileID: 3200000054}
+  - component: {fileID: 3500000001}
   m_Layer: 0
   m_Name: Arena
   m_TagString: Untagged
@@ -8976,6 +8977,24 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 47f981e64cabc3349980cb6e6f7f834d, type: 3}
+--- !u!114 &3500000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2037038414}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7540bb75782561f44c85cb786f5482d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.PlayArea
+  size: {x: 63.7, y: 63.7}
+  wallHeight: 60
+  wallThickness: 2
+  margin: 1
+  perchHeight: 3.3
+  perchGrace: 0.6
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
