@@ -35,7 +35,7 @@ namespace HyperInfinite
             { "LEFT MOUSE", "FIRE", "HOLD TO KEEP FIRING. BUILDS HEAT" },
             { "RIGHT MOUSE", "AIM", "HOLD TO TIGHTEN THE SPREAD" },
             { "R", "VENT HEAT", "DUMPS ALL HEAT. HEALS FROM A REDLINE" },
-            { "Q", "BASH", "SEARS AND BRANDS WITH A LITTLE HEAT" },
+            { "Q", "BASH", "SEARS AND BRANDS. BRANDED KILLS HEAL" },
             { "HOLD Q", "HEAVY BASH", "DUMPS ALL HEAT. AIM DOWN TO LAUNCH" },
             { "ESC", "PAUSE", "" },
         };

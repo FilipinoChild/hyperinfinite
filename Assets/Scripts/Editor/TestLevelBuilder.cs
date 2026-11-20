@@ -169,6 +169,7 @@ namespace HyperInfinite
             root.AddComponent<PlayerMotor>();
             root.AddComponent<Health>();
             root.AddComponent<HyperPower>();   // the HYPER power-up, switched on by a HYPER core
+            root.AddComponent<HeartShards>();   // branded kills drop hearts that fly back and heal
             root.AddComponent<PlayerRespawn>();   // getting back up where you fell, and falls out of the level
             root.AddComponent<PlayerHud>();   // HP and the dash cooldown, bottom left
             root.AddComponent<PauseMenu>();   // Esc: resume, main menu or quit

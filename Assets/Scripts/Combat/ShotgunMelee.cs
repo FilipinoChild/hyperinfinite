@@ -137,6 +137,7 @@ namespace HyperInfinite
         {
             public Collider collider;
             public IDamageable target;
+            public Health life;
             public float until, nextEmber, since;
         }
 
@@ -191,6 +192,19 @@ namespace HyperInfinite
         public bool LastBashLanded => LastHitTime >= LastBashTime;
         /// <summary>How many enemies are branded right now.</summary>
         public int BrandCount { get; private set; }
+
+        /// <summary>
+        /// True if <paramref name="enemy"/> carries a brand. Still true in the moment it dies, so whatever listens
+        /// for deaths (HeartShards) can tell a branded kill; the brand goes out after that.
+        /// </summary>
+        public bool IsBranded(Health enemy)
+        {
+            if (!enemy) return false;
+            float now = Time.time;
+            for (int i = 0; i < MaxBrands; i++)
+                if (brands[i].life == enemy && brands[i].collider && now < brands[i].until) return true;
+            return false;
+        }
 
         bool IsDown => health && health.IsDead;
 
@@ -534,7 +548,8 @@ namespace HyperInfinite
         /// <summary>Marks what a searing bash hit, if it's something with health. Brands on it already are renewed.</summary>
         void ApplyBrand(Collider c, IDamageable target)
         {
-            if (!c.GetComponentInParent<Health>()) return;   // eggs, webs and hatchlings go at the first hit anyway
+            var life = c.GetComponentInParent<Health>();
+            if (!life || life.IsDead) return;   // eggs, webs and hatchlings go at the first hit anyway
             int slot = -1;
             float oldest = float.PositiveInfinity;
             for (int i = 0; i < MaxBrands; i++)
@@ -547,7 +562,7 @@ namespace HyperInfinite
                     slot = i;
                 }
             }
-            brands[slot] = new Brand { collider = c, target = target, until = Time.time + brandTime, nextEmber = 0f, since = Time.time };
+            brands[slot] = new Brand { collider = c, target = target, life = life, until = Time.time + brandTime, nextEmber = 0f, since = Time.time };
         }
 
         /// <summary>
@@ -562,10 +577,11 @@ namespace HyperInfinite
             for (int i = 0; i < MaxBrands; i++)
             {
                 ref Brand b = ref brands[i];
-                if (!b.collider || now >= b.until)
+                if (!b.collider || now >= b.until || (b.life && b.life.IsDead))   // the brand goes out with its enemy
                 {
                     b.collider = null;
                     b.target = null;
+                    b.life = null;
                     ShowMark(i, false);
                     continue;
                 }
@@ -614,8 +630,6 @@ namespace HyperInfinite
                 if (!marked) continue;
                 Vector3 center = marked.bounds.center;
                 if ((center - me).sqrMagnitude > brandReach * brandReach) continue;   // out of reach: it keeps smouldering
-                brands[b].collider = null;
-                brands[b].target = null;
                 ShowMark(b, false);
                 burst++;
                 PixelFx.Bolt(muzzle, center, Palette.Amber, 0.07f, 0.16f);   // the heat races from the gun to the brand
@@ -628,6 +642,10 @@ namespace HyperInfinite
                     if (distance > brandRadius) continue;
                     Hit(struck[i], damage * (1f - 0.5f * Mathf.Clamp01(distance / brandRadius)), point, point - center, distance);
                 }
+                // Spent only now, so an enemy its own burst kills still counts as a branded kill.
+                brands[b].collider = null;
+                brands[b].target = null;
+                brands[b].life = null;
                 PixelFx.Flash(center, Palette.Amber, 0.8f, 0.07f);
                 PixelFx.Burst(center, Palette.Amber, Palette.Red, 16, 6f, 0.4f, 0.13f);
                 PixelFx.Ring(new Vector3(center.x, marked.bounds.min.y, center.z), brandRadius, Palette.Amber, 18, 0.25f, 0.18f);
