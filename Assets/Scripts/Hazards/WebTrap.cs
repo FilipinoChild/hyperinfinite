@@ -133,6 +133,7 @@ namespace HyperInfinite
                 holding = true;
                 struggle = PuffEvery;
                 PixelFx.Sparks(feet + Vector3.up * 0.1f, Vector3.up, Palette.White, 6, 3f, 0.3f);
+                Sfx.Play(Sound.WebCaught);   // it's got you: heard as your own
                 onCaught.Invoke();
             }
             // Strands snap around the feet as they drag themselves through it.
@@ -164,6 +165,7 @@ namespace HyperInfinite
             Vector3 middle = transform.position + Vector3.up * 0.2f;
             PixelFx.Burst(middle, Palette.White, Palette.Dim, 26, 5f, 0.5f, 0.14f);
             PixelFx.Ring(transform.position, radius, Palette.White, 20, 0.25f, 0.16f);
+            Sfx.At(Sound.WebTorn, middle);
             onTorn.Invoke();
         }
 

@@ -132,6 +132,9 @@ namespace HyperInfinite
 
                 alive.Add(Instantiate(scuttlerPrefab, position, point.rotation));
             }
+            // The skitter of many legs from where they come in, so a pack arriving behind you can be heard.
+            Sfx.At(Sound.PackSpawn, spawnPoints[first].position);
+            if (second != first) Sfx.At(Sound.PackSpawn, spawnPoints[second].position);
 
             packsSpawned++;
             onPackSpawned.Invoke(packsSpawned);

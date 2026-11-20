@@ -81,6 +81,7 @@ namespace HyperInfinite
             if (!IsShowing) return;
             IsShowing = false;
             Time.timeScale = timeScaleBefore;
+            Sfx.Play(Sound.UiSelect);
             if (canvas) Destroy(canvas.gameObject);
             if (controls) controls.Unblock(this);   // play begins with the mouse captured
             onBegin.Invoke();
