@@ -14,6 +14,12 @@ namespace HyperInfinite
     /// As a last resort, PlayerRespawn checks <see cref="Contains"/>: anyone who ends up outside is put back on the
     /// last ground they stood on inside, and ground outside is never remembered as safe.
     ///
+    /// No perching: nothing can reach you higher than <see cref="perchHeight"/> above the floor (a Scuttler pounces
+    /// about 3.2 m, the Hive Mother's slam reaches 2.5 m), so standing that high, on the tall pillars, the rock
+    /// spires or the tops of the arches, slides you off, a little hop outward toward the middle of the arena at a
+    /// time, with a spray of grit. Jumping through that space is fine; only standing there isn't. The terraces,
+    /// mesas, boulders and cover up to 3 m tall are all below it.
+    ///
     /// Put one on the arena's root, centered on the floor. The size is the inside of the walls.
     /// </summary>
     [DisallowMultipleComponent]
@@ -30,7 +36,15 @@ namespace HyperInfinite
         [Tooltip("How far past the walls counts as outside, in meters, so brushing against one never does.")]
         [SerializeField, Min(0f)] float margin = 1f;
 
+        [Header("No perching")]
+        [Tooltip("Standing higher than this above the floor slides you off: up there nothing could reach you. Scuttlers pounce about 3.2 m. 0 allows standing anywhere.")]
+        [SerializeField, Min(0f)] float perchHeight = 3.3f;
+        [Tooltip("How hard each nudge off a perch is, in meters per second, outward and a little up.")]
+        [SerializeField, Min(0f)] float slideSpeed = 6f;
+
         static PlayArea current;
+        PlayerMotor player;
+        float nextSearch, nextNudge;
 
         /// <summary>The play area of the scene that's running, if it has one.</summary>
         public static PlayArea Current => current;
@@ -54,6 +68,31 @@ namespace HyperInfinite
         static void ResetStatics()
         {
             current = null;   // with domain reload off, nothing from the last Play carries over
+        }
+
+        /// <summary>A player standing higher than anything can reach is nudged off, toward the middle of the arena.</summary>
+        void Update()
+        {
+            if (perchHeight <= 0f) return;
+            if (!player)
+            {
+                if (Time.time < nextSearch) return;
+                nextSearch = Time.time + 1f;
+                player = FindAnyObjectByType<PlayerMotor>();
+                if (!player) return;
+            }
+            if (!player.IsGrounded || Time.time < nextNudge) return;
+            Vector3 feet = player.transform.position;
+            if (feet.y - transform.position.y <= perchHeight) return;
+
+            nextNudge = Time.time + 0.12f;
+            Vector3 inward = transform.position - feet;
+            inward.y = 0f;
+            if (inward.sqrMagnitude < 1f) inward = player.transform.forward;   // right in the middle: any way off will do
+            inward.y = 0f;
+            // A hop as well as a shove: on the ground the motor soaks up sideways speed, in the air it carries.
+            player.Push(inward.normalized * slideSpeed + Vector3.up * 3f);
+            PixelFx.Burst(feet + Vector3.up * 0.1f, Palette.Steel, Palette.Dim, 6, 2.5f, 0.3f, 0.06f);   // grit kicked off the edge
         }
 
         /// <summary>True if <paramref name="point"/> is inside the walls, give or take the margin. Height doesn't count.</summary>

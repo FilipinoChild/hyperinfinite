@@ -8993,6 +8993,8 @@ MonoBehaviour:
   wallHeight: 60
   wallThickness: 2
   margin: 1
+  perchHeight: 3.3
+  slideSpeed: 6
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
