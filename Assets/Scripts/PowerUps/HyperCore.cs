@@ -71,6 +71,21 @@ namespace HyperInfinite
             PixelFx.Burst(ground + Vector3.up * hover, Palette.Cyan, Palette.PaleCyan, 16, 4f, 0.4f, 0.12f);
         }
 
+        /// <summary>Seconds left before it fades.</summary>
+        public float TimeLeft => Mathf.Max(0f, lifetime - (Time.time - born));
+
+        /// <summary>
+        /// Another core was earned while this one waits: rather than a second, this one starts its wait over, with a
+        /// flash and a ring like its arrival, so the earned core is never lost.
+        /// </summary>
+        public void Renew()
+        {
+            born = Time.time - 0.4f;   // past the pop-up, so it doesn't jump
+            PixelFx.Ring(ground, 2.2f, Palette.Cyan, 24, 0.35f, 0.2f);
+            PixelFx.Flash(transform.position, Palette.White, 1f, 0.08f);
+            PixelFx.Burst(transform.position, Palette.Cyan, Palette.PaleCyan, 12, 3.5f, 0.35f, 0.1f);
+        }
+
         void Update()
         {
             float age = Time.time - born;
