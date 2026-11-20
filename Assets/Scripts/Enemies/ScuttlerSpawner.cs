@@ -50,6 +50,17 @@ namespace HyperInfinite
         public UnityEvent<int> onPackSpawned = new UnityEvent<int>();
         [Tooltip("Every pack has been sent and killed. The boss fight can start here.")]
         public UnityEvent onAllPacksCleared = new UnityEvent();
+        [Tooltip("Every enemy a pack brought is dead, even if the next pack is already in. Sent with its wave number.")]
+        public UnityEvent<int> onWaveCleared = new UnityEvent<int>();
+
+        /// <summary>One wave's enemies, to tell when they're all dead.</summary>
+        class PackRecord
+        {
+            public int wave;
+            public readonly List<GameObject> members = new List<GameObject>(24);
+        }
+        readonly List<PackRecord> packs = new List<PackRecord>(8);
+        readonly Stack<PackRecord> spareRecords = new Stack<PackRecord>(8);
 
         readonly List<GameObject> alive = new List<GameObject>();   // every enemy this spawner sent that's still alive
         readonly List<GameObject> lastPack = new List<GameObject>(24);   // the pack just sent, Spitters included
@@ -76,6 +87,9 @@ namespace HyperInfinite
         public float NextWaveIn => waiting && !cleared ? Mathf.Max(0f, timer) : 0f;
         /// <summary>Every wave has been sent and killed.</summary>
         public bool AllCleared => cleared;
+        /// <summary>The last wave whose enemies are all dead, and when; 0 and long ago before the first. For the HUD's WAVE N CLEARED.</summary>
+        public int LastClearedWave { get; private set; }
+        public float LastClearedTime { get; private set; } = -100f;
         /// <summary>The enemies of the pack just sent, Spitters included, for whatever listens to onPackSpawned (PowerUpDrops' safety net).</summary>
         public IReadOnlyList<GameObject> LastPack => lastPack;
 
@@ -83,6 +97,7 @@ namespace HyperInfinite
         {
             // A destroyed object counts as null in Unity, so this drops the dead ones from the list
             alive.RemoveAll(scuttler => scuttler == null);
+            CheckWavesCleared();
 
             // Every pack sent and killed: announce it once, then stop
             int total = TotalWaves;
@@ -115,6 +130,24 @@ namespace HyperInfinite
 
             waiting = false;
             SpawnPack();
+        }
+
+        /// <summary>A wave is cleared once every enemy it brought is dead, whatever else is still alive.</summary>
+        void CheckWavesCleared()
+        {
+            for (int p = packs.Count - 1; p >= 0; p--)
+            {
+                PackRecord pack = packs[p];
+                bool anyAlive = false;
+                for (int i = 0; i < pack.members.Count; i++)
+                    if (pack.members[i]) { anyAlive = true; break; }
+                if (anyAlive) continue;
+                packs.RemoveAt(p);
+                spareRecords.Push(pack);
+                LastClearedWave = pack.wave;
+                LastClearedTime = Time.time;
+                onWaveCleared.Invoke(pack.wave);
+            }
         }
 
         /// <summary>How big pack <paramref name="index"/> is, counting from 0.</summary>
@@ -168,11 +201,13 @@ namespace HyperInfinite
                     lastPack.Add(spitter);   // a Spitter is part of its wave, for the HYPER safety net too
                 }
             }
-            // The skitter of many legs from where they come in, so a pack arriving behind you can be heard.
-            Sfx.At(Sound.PackSpawn, spawnPoints[first].position);
-            if (second != first) Sfx.At(Sound.PackSpawn, spawnPoints[second].position);
 
             packsSpawned++;
+            PackRecord record = spareRecords.Count > 0 ? spareRecords.Pop() : new PackRecord();
+            record.wave = packsSpawned;
+            record.members.Clear();
+            record.members.AddRange(lastPack);
+            packs.Add(record);
             onPackSpawned.Invoke(packsSpawned);
             Debug.Log("Pack " + packsSpawned + ": " + size + " Scuttlers");
         }

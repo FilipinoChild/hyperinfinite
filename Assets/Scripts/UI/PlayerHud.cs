@@ -24,8 +24,9 @@ namespace HyperInfinite
     /// Above the crosshair, WEBBED! SHOOT THE WEB blinks while a Web Trap has hold of you.
     ///
     /// Top left is the wave counter, for scenes with a ScuttlerSpawner: GET READY before the first wave,
-    /// then the wave number with how many Scuttlers are left, a countdown between waves, and ALL CLEAR at
-    /// the end. The number pops when a new wave arrives.
+    /// then the wave number with how many enemies are left, and ALL CLEAR at the end. The number pops when a
+    /// new wave arrives. Waves overlap, so the countdown to the next one shows beside what's left while it's on
+    /// its way, and WAVE N CLEARED flashes when the last enemy a wave brought dies, even with the next one in.
     ///
     /// Top middle, while a Boss is in the fight, is the boss bar with its name and health (BossBar).
     ///
@@ -50,6 +51,7 @@ namespace HyperInfinite
 
         const float HealthBarWidth = 396f, DashBarWidth = 180f, HeatBarWidth = 180f, CrosshairDashWidth = 120f;
         const float TickLength = 9f, TickThickness = 3f;
+        const float ClearFlashTime = 1.6f;   // seconds WAVE N CLEARED shows
 
         static readonly Vector2 TopLeft = new Vector2(0f, 1f), TopRight = new Vector2(1f, 1f), Middle = new Vector2(0.5f, 0.5f);
         static readonly Color TrailColor = new Color(1f, 0.92f, 0.85f, 0.85f);
@@ -478,22 +480,37 @@ namespace HyperInfinite
                 waveTitle.color = wavePop > 0.5f ? Palette.Yellow : Palette.White;
             }
 
-            // Each line of text gets a number that stands for what it says, so it's only rewritten when that changes.
+            // WAVE N CLEARED for a moment when the last enemy a wave brought dies, unless a new wave has just
+            // arrived and is popping in. It doesn't pop itself: the words fill the panel as they are.
             bool cleared = waves.AllCleared;
+            int clearedWave = waves.LastClearedWave;
+            float sinceClear = Time.time - waves.LastClearedTime;
+            bool flash = !cleared && clearedWave > 0 && sinceClear < ClearFlashTime && wavePop <= 0f;
+            if (flash)
+            {
+                waveTitle.rectTransform.localScale = Vector3.one;
+                waveTitle.color = sinceClear < 0.5f && Mathf.Repeat(sinceClear * 8f, 1f) < 0.5f ? Palette.White : Palette.Cyan;
+            }
+            else if (!cleared && wavePop <= 0f) waveTitle.color = Palette.White;
+
+            // Each line of text gets a number that stands for what it says, so it's only rewritten when that changes.
             int seconds = Mathf.CeilToInt(waves.NextWaveIn);
-            int title = cleared ? -1 : wave * 1000 + total;
-            int detail = cleared ? -1 - total : remaining > 0 ? remaining : -100000 - seconds;
+            bool incoming = remaining > 0 && seconds > 0;   // the next wave is on its way while this one's still going
+            int title = cleared ? -1 : flash ? -1000 - clearedWave : wave * 1000 + total;
+            int detail = cleared ? -1 - total : incoming ? 500000 + remaining * 100 + seconds : remaining > 0 ? remaining : -100000 - seconds;
             if (title != shownTitle)
             {
                 shownTitle = title;
-                waveTitle.text = cleared ? "ALL CLEAR" : wave == 0 ? "GET READY" : total > 0 ? "WAVE " + wave + " / " + total : "WAVE " + wave;
+                waveTitle.text = cleared ? "ALL CLEAR" : flash ? "WAVE " + clearedWave + " CLEARED"
+                               : wave == 0 ? "GET READY" : total > 0 ? "WAVE " + wave + " / " + total : "WAVE " + wave;
                 if (cleared) waveTitle.color = Palette.Cyan;
             }
             if (detail != shownDetail)
             {
                 shownDetail = detail;
                 waveDetail.text = cleared ? (total > 0 ? "ALL " + total + " WAVES DOWN" : "")
-                                : remaining > 0 ? remaining + (remaining == 1 ? " SCUTTLER LEFT" : " SCUTTLERS LEFT")
+                                : incoming ? remaining + " LEFT \u00B7 NEXT WAVE IN " + seconds + " S"
+                                : remaining > 0 ? remaining + (remaining == 1 ? " ENEMY LEFT" : " ENEMIES LEFT")
                                 : (wave == 0 ? "FIRST WAVE IN " : "NEXT WAVE IN ") + seconds + " S";
             }
         }
