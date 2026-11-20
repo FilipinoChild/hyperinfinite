@@ -43,6 +43,7 @@ namespace HyperInfinite
         [SerializeField, Min(0f)] float slideSpeed = 6f;
 
         static PlayArea current;
+        static readonly RaycastHit[] below = new RaycastHit[8];
         PlayerMotor player;
         float nextSearch, nextNudge, lastY, stillFor;
 
@@ -91,9 +92,11 @@ namespace HyperInfinite
             }
             stillFor = still ? stillFor + Time.deltaTime : 0f;
             if (Time.time < nextNudge || player.IsDashing) return;   // a level air dash passes through, it doesn't stand
+            if (player.Velocity.y > 0.5f) return;                    // already on the way up: never hop someone who's rising
             if (!Resting(feet)) return;
 
             nextNudge = Time.time + 0.12f;
+            stillFor = 0f;
             Vector3 inward = transform.position - feet;
             inward.y = 0f;
             if (inward.sqrMagnitude < 1f) inward = player.transform.forward;   // right in the middle: any way off will do
@@ -114,8 +117,17 @@ namespace HyperInfinite
         bool Resting(Vector3 feet)
         {
             if (player.IsGrounded || stillFor > 0.25f) return true;
-            return Physics.SphereCast(feet + Vector3.up * 0.45f, 0.35f, Vector3.down, out RaycastHit _, 0.55f,
-                                      Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            // The sweep starts inside the player's own body, so its own collider has to be skipped, or it would always
+            // find "ground" under itself.
+            Transform self = player.transform;
+            int count = Physics.SphereCastNonAlloc(feet + Vector3.up * 0.45f, 0.35f, Vector3.down, below, 0.55f,
+                                                   Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                Collider c = below[i].collider;
+                if (c && !c.transform.IsChildOf(self)) return true;
+            }
+            return false;
         }
 
         /// <summary>True if <paramref name="point"/> is inside the walls, give or take the margin. Height doesn't count.</summary>
