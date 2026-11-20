@@ -25,8 +25,6 @@ namespace HyperInfinite
             if (!shotgun) shotgun = GetComponentInChildren<EnergyBlastShotgun>();
             timeLeft = Mathf.Max(timeLeft, duration);   // a second pickup refreshes the timer
             IsActive = true;
-            if (shotgun) shotgun.HeatMultiplier = 0f;
-            if (shotgun) shotgun.Supercharged = true;
             Debug.Log("INFINITE active for " + duration + " seconds");
             PowerUpBanner.Show("INFINITE\nNo overheating. Shots set enemies on fire!", 3.5f);
         }
@@ -42,8 +40,6 @@ namespace HyperInfinite
         {
             IsActive = false;
             timeLeft = 0f;
-            if (shotgun) shotgun.HeatMultiplier = 1f;
-            if (shotgun) shotgun.Supercharged = false;
             Debug.Log("INFINITE ended");
             PowerUpBanner.Show("INFINITE wore off", 2f);
         }

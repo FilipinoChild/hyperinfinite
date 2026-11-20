@@ -96,8 +96,6 @@ namespace HyperInfinite
         [SerializeField, ColorUsage(false, true)] Color hotGlow = new Color(2.6f, 0.75f, 0.15f);
         [Tooltip("Redlined.")]
         [SerializeField, ColorUsage(false, true)] Color overheatGlow = new Color(3.5f, 0.25f, 0.08f);
-        [Tooltip("Glow while the INFINITE power-up is active.")]
-        [SerializeField, ColorUsage(false, true)] Color infiniteGlow = new Color(2.6f, 1.6f, 0.2f);
 
         [Header("Effects")]
         [Tooltip("How brightly the muzzle light flashes on each blast.")]
@@ -144,11 +142,6 @@ namespace HyperInfinite
         /// <summary>Half-angle of the bolt cone right now, in degrees: it tightens as the gun comes up to aim.</summary>
         public float Spread => Mathf.Lerp(hipSpread, aimSpread, AimBlend);
         public bool IsCycling => cycleTimer > 0f;
-        public bool IsOverheated => overheatTimer > 0f;
-        /// Multiplies the heat each shot adds. The INFINITE power-up sets it to 0.
-        public float HeatMultiplier { get; set; } = 1f;
-        /// True while the INFINITE power-up is active. Set by InfiniteBuff.
-        public bool Supercharged { get; set; }
         /// <summary>At 100 heat: it won't fire until the heat is vented or bashed out.</summary>
         public bool IsRedlined => heat >= 100f;
         public bool IsVenting => venting;
@@ -340,9 +333,6 @@ namespace HyperInfinite
             cycleTimer = cycleTime;
             Kick = 1f;
             flash = flashIntensity;
-            heat = Mathf.Min(100f, heat + heatPerShot * HeatMultiplier);
-            bool overheatedNow = heat >= 100f;   // the blast that overheats still goes off
-            if (overheatedNow) overheatTimer = overheatLockout;
             float added = Mathf.Min(100f, heat + heatPerShot) - heat;
             heat += added;
             bool redlinedNow = heat >= 100f;   // the blast that redlines still goes off
@@ -371,7 +361,7 @@ namespace HyperInfinite
                     }
                     else PixelFx.Sparks(hit.point, hit.normal, Palette.PaleCyan, 2, 6f, 0.22f);
                 }
-                PixelFx.Bolt(NextEmitter().position, end, Supercharged ? Palette.Yellow : Palette.Cyan, 0.06f, 0.11f);   // gold bolts during INFINITE
+                PixelFx.Bolt(NextEmitter().position, end, Palette.Cyan, 0.06f, 0.11f);
             }
 
             // One hit per target with all its bolts added up, so a target sees the whole blast at once.
@@ -384,8 +374,13 @@ namespace HyperInfinite
                 if (!hitEnemy && p.target is Component part && part.TryGetComponent(out Health life) && !life.IsDead) hitEnemy = true;
                 p.target.TakeDamage(new DamageInfo
                 {
-                    Amount = p.damage, Kind = DamageKind.Shotgun, Point = p.point, Direction = forward,
-                    Distance = p.distance, Hits = p.bolts, Source = shooter.gameObject,
+                    Amount = p.damage,
+                    Kind = DamageKind.Shotgun,
+                    Point = p.point,
+                    Direction = forward,
+                    Distance = p.distance,
+                    Hits = p.bolts,
+                    Source = shooter.gameObject,
                 });
                 report.Damage += p.damage;
                 if (p.damage > most)
@@ -426,8 +421,12 @@ namespace HyperInfinite
             var component = target as Component;
             pending.Add(new Pending
             {
-                target = target, name = component ? component.name : "target", damage = damage,
-                distance = hit.distance, bolts = 1, point = hit.point,
+                target = target,
+                name = component ? component.name : "target",
+                damage = damage,
+                distance = hit.distance,
+                bolts = 1,
+                point = hit.point,
             });
         }
 
@@ -446,7 +445,6 @@ namespace HyperInfinite
                 float charge = cycleTimer > 0f && cycleTime > 0f ? 1f - cycleTimer / cycleTime : 1f;
                 glow *= Mathf.Lerp(0.25f, 1f, charge);
             }
-            if (Supercharged) glow = infiniteGlow * (0.8f + 0.2f * Mathf.Sin(Time.time * 12f));   // pulses gold during INFINITE
             GlowColor = glow;
         }
 
