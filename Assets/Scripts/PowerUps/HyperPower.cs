@@ -14,6 +14,9 @@ namespace HyperInfinite
     ///    25 seconds in all.
     /// It ends at once if he goes down.
     ///
+    /// While it's on, John leaves a trail of fading cyan pixel squares behind him whenever he runs flat out or
+    /// dashes, and it starts with a cyan burst and ring at his feet. The HUD's HYPER panel shows the time left.
+    ///
     /// Put it on the Player, next to PlayerMotor. ShotgunMelee and the HUD read it; HyperCore calls Activate.
     /// </summary>
     [DisallowMultipleComponent]
@@ -61,7 +64,7 @@ namespace HyperInfinite
         PlayerMotor motor;
         Health health;
         ShotgunMelee melee;
-        float startedAt = -100f, endsAt = -100f;
+        float startedAt = -100f, endsAt = -100f, trailDue;
         bool active, wasDashing;
 
         /// <summary>True while HYPER is on.</summary>
@@ -73,6 +76,8 @@ namespace HyperInfinite
         /// <summary>When it last started, and when kills last added time.</summary>
         public float StartedAt => startedAt;
         public float LastExtendTime { get; private set; } = -100f;
+        /// <summary>Seconds the kills last added.</summary>
+        public float LastExtendAmount { get; private set; }
         public float ReachBoost => active ? reachBoost : 1f;
         public float ExtraWidth => active ? extraWidth : 0f;
         public float LungeBoost => active ? lungeBoost : 1f;
@@ -104,6 +109,10 @@ namespace HyperInfinite
             {
                 active = true;
                 motor.SpeedScale = speedBoost;
+                Vector3 feet = transform.position;
+                PixelFx.Ring(feet, 3f, Palette.Cyan, 30, 0.35f, 0.22f);
+                PixelFx.Ring(feet, 1.8f, Palette.White, 20, 0.25f, 0.18f);
+                PixelFx.Burst(feet + Vector3.up, Palette.Cyan, Palette.PaleCyan, 24, 5f, 0.45f, 0.14f);
                 onHyperStart.Invoke();
             }
         }
@@ -126,7 +135,8 @@ namespace HyperInfinite
             if (endsAt > before)
             {
                 LastExtendTime = Time.time;
-                onExtended.Invoke(endsAt - before);
+                LastExtendAmount = endsAt - before;
+                onExtended.Invoke(LastExtendAmount);
             }
             motor.RefundDash();   // chain lunges: a kill puts the dash straight back
         }
@@ -140,6 +150,23 @@ namespace HyperInfinite
                 return;
             }
             Ram();
+            Trail();
+        }
+
+        /// <summary>
+        /// Fading cyan squares left hanging in the air behind him while he runs flat out or dashes: an afterimage,
+        /// thicker while dashing. A few PixelFx squares at a time.
+        /// </summary>
+        void Trail()
+        {
+            bool dashing = motor.IsDashing;
+            if (!dashing && motor.Speed < motor.RunSpeed * 0.9f) return;
+            float now = Time.time;
+            if (now < trailDue) return;
+            trailDue = now + (dashing ? 0.02f : 0.05f);
+            Vector3 at = transform.position + new Vector3(Random.Range(-0.3f, 0.3f), Random.Range(0.2f, 1.7f), Random.Range(-0.3f, 0.3f));
+            Color color = dashing && Random.value < 0.4f ? Palette.White : Random.value < 0.5f ? Palette.Cyan : Palette.PaleCyan;
+            PixelFx.Mote(at, Vector3.up * 0.15f, color, Random.Range(0.07f, 0.11f), dashing ? 0.45f : 0.35f);
         }
 
         /// <summary>

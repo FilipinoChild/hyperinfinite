@@ -18,7 +18,8 @@ namespace HyperInfinite
     /// cells say it's ready. The heavy bash slams the gun forward: the cells flash white, a three-frame
     /// explosion goes off at the emitters with a shockwave ring growing in steps, and the screen flashes amber
     /// for two frames, all bigger the more heat went into it. An overload, from a redlined gun, is bigger still
-    /// and flashes white first, for three frames.
+    /// and flashes white first, for three frames. Under HYPER all of it is cyan and white instead, and the
+    /// cells glow white and cyan for as long as HYPER lasts.
     ///
     /// Put it next to EnergyBlastShotgun, under the camera. It makes its own screen-space canvas, so the
     /// gun never pokes into walls. The texture needs Read/Write switched on for the emitter glow, and
@@ -71,6 +72,7 @@ namespace HyperInfinite
 
         EnergyBlastShotgun shotgun;
         ShotgunMelee melee;
+        HyperPower hyper;
         PlayerMotor motor;
         PlayerControls controls;
         Health health;
@@ -89,6 +91,7 @@ namespace HyperInfinite
         {
             shotgun = GetComponent<EnergyBlastShotgun>();
             melee = GetComponent<ShotgunMelee>();
+            hyper = GetComponentInParent<HyperPower>();
             motor = GetComponentInParent<PlayerMotor>();
             controls = GetComponentInParent<PlayerControls>();
             health = GetComponentInParent<Health>();
@@ -324,20 +327,29 @@ namespace HyperInfinite
                 muzzle.position = view.ScreenToWorldPoint(new Vector3(onScreen.x, onScreen.y, muzzleDepth));
             }
         }
-        /// <summary>The cells for the melee: white as a heavy bash fires or the charge comes ready, strobing while charging, amber after a sear.</summary>
+        /// <summary>
+        /// The cells for the melee: white as a heavy bash fires or the charge comes ready, strobing while charging,
+        /// amber after a sear, and stepping between white and cyan all through HYPER.
+        /// </summary>
         Color MeleeGlow(Color hue, float now, float heat)
         {
             float sinceHeavy = now - melee.LastHeavyTime, sinceBash = now - melee.LastBashTime;
             if (sinceHeavy < 0.1f || now - readyAt < 0.08f) return Color.white;
             if (charge > 0f)
             {
-                Color hot = shotgun.IsRedlined ? RedlineCells : Color.Lerp(CoolCells, HotCells, heat);
+                bool boosted = hyper && hyper.IsActive;
+                Color hot = boosted ? CoolCells : shotgun.IsRedlined ? RedlineCells : Color.Lerp(CoolCells, HotCells, heat);
                 bool lit = Mathf.Repeat(now * (6f + 10f * heat), 1f) < 0.5f;   // strobes faster with more heat behind it
                 Color strobe = lit ? Color.white : hot;
                 strobe.a = 1f;
                 return Color.Lerp(hue, strobe, charge);
             }
             if (sinceBash < 0.1f && melee.LastBash != ShotgunMelee.BashKind.Plain && melee.LastBashLanded) return new Color(1f, 0.8f, 0.35f, 1f);
+            if (hyper && hyper.IsActive)
+            {
+                bool lit = Mathf.Repeat(now * 3f, 1f) < 0.5f;   // a steady step between white and cyan
+                return lit ? Color.white : new Color(CoolCells.r, CoolCells.g, CoolCells.b, 1f);
+            }
             return hue;
         }
 
@@ -369,7 +381,9 @@ namespace HyperInfinite
             {
                 int frame = Mathf.Min(2, (int)(sinceHeavy / (BlastTime / 3f)));
                 blast.rectTransform.sizeDelta = Vector2.one * scale * (frame == 0 ? 1f : frame == 1 ? 1.25f : 1.1f);
-                blast.color = frame == 0 ? Palette.White : frame == 1 ? Palette.Yellow : power > 0.5f ? Palette.Red : Palette.Amber;
+                blast.color = frame == 0 ? Palette.White
+                            : melee.LastHeavyHyper ? (frame == 1 ? Palette.PaleCyan : Palette.Cyan)
+                            : frame == 1 ? Palette.Yellow : power > 0.5f ? Palette.Red : Palette.Amber;
             }
 
             // Its shockwave: a broken ring growing in four steps and cooling from yellow to red.
@@ -379,7 +393,8 @@ namespace HyperInfinite
             {
                 int step = Mathf.Min(3, (int)(sinceHeavy / (RingTime / 4f)));
                 ring.rectTransform.sizeDelta = Vector2.one * scale * (0.7f + 0.45f * step);
-                ring.color = step == 0 ? Palette.Yellow : step == 3 ? Palette.Red : Palette.Amber;
+                ring.color = melee.LastHeavyHyper ? (step == 0 ? Palette.White : step == 3 ? Palette.Cyan : Palette.PaleCyan)
+                                                  : step == 0 ? Palette.Yellow : step == 3 ? Palette.Red : Palette.Amber;
             }
 
             // The whole view flashes for two frames: amber, then red. An overload flashes white first, for three.
@@ -391,7 +406,9 @@ namespace HyperInfinite
             if (heavyFlash)
             {
                 int frame = (int)(sinceHeavy / (ScreenFlashTime * 0.5f)) + (overload ? 0 : 1);   // 0 white, 1 amber, 2 red
-                Color c = frame == 0 ? Palette.White : frame == 1 ? Palette.Amber : Palette.Red;
+                Color c = frame == 0 ? Palette.White
+                        : melee.LastHeavyHyper ? (frame == 1 ? Palette.PaleCyan : Palette.Cyan)
+                        : frame == 1 ? Palette.Amber : Palette.Red;
                 c.a = frame == 0 ? 0.35f : frame == 1 ? 0.14f + 0.18f * power : 0.08f + 0.1f * power;
                 screenFlash.color = c;
             }

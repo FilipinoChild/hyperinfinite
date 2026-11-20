@@ -152,6 +152,8 @@ namespace HyperInfinite
         GameObject markHolder;
         Material markMaterial;
         readonly List<IDamageable> struck = new List<IDamageable>(16);
+        // The heavy bash's three colors: amber heat normally, cyan and white under HYPER.
+        Color core = Palette.Yellow, warm = Palette.Amber, hot = Palette.Red;
         int kills;          // what the heavy bash under way has killed so far
         Vector3 killSum;
         readonly List<Collider> struckBy = new List<Collider>(16);
@@ -377,6 +379,9 @@ namespace HyperInfinite
             LastHeavyOverload = overload;
             bool boosted = hyper && hyper.IsActive;
             LastHeavyHyper = boosted;
+            core = boosted ? Palette.White : Palette.Yellow;
+            warm = boosted ? Palette.PaleCyan : Palette.Amber;
+            hot = boosted ? Palette.Cyan : Palette.Red;
             kills = 0;
             killSum = Vector3.zero;
 
@@ -427,7 +432,7 @@ namespace HyperInfinite
 
             Vector3 muzzle = origin + forward * 0.9f - view.up * 0.15f;
             PixelFx.Flash(muzzle, Palette.White, 0.4f + 0.5f * power + (overload ? 0.3f : 0f), 0.07f);
-            PixelFx.Cone(muzzle, forward, width * 0.8f, power > 0.5f ? Palette.Red : Palette.Amber, Palette.Yellow,
+            PixelFx.Cone(muzzle, forward, width * 0.8f, power > 0.5f ? hot : warm, core,
                          Mathf.RoundToInt(16f + 40f * power), reach / 0.28f, 0.28f, 0.12f + 0.08f * power);
             HeatBolts(origin, muzzle, forward, reach, width, power, overload);
             Shockwave(forward, reach, width, power, overload);
@@ -445,7 +450,7 @@ namespace HyperInfinite
                 Vector3 direction = Quaternion.AngleAxis(across, up) * Quaternion.AngleAxis(Random.Range(-6f, 6f), view.right) * forward;
                 float length = reach * Random.Range(0.75f, 1f);
                 Vector3 end = Raycasts.Nearest(origin, direction, length, player, out RaycastHit wall, false) ? wall.point : origin + direction * length;
-                Color color = i % 3 == 0 ? Palette.Yellow : i % 3 == 1 ? Palette.Amber : Palette.Red;
+                Color color = i % 3 == 0 ? core : i % 3 == 1 ? warm : hot;
                 PixelFx.Bolt(muzzle, end, overload && i % 4 == 0 ? Palette.White : color, 0.07f + 0.05f * power, 0.12f + 0.06f * power);
             }
         }
@@ -455,9 +460,9 @@ namespace HyperInfinite
         {
             Vector3 feet = player.position;
             int count = Mathf.RoundToInt(16f + 22f * power);
-            PixelFx.Fan(feet, forward, reach * 0.85f, width, Palette.Yellow, count, 0.2f, 0.18f);
-            PixelFx.Fan(feet, forward, reach, width, Palette.Amber, count + 6, 0.28f, 0.22f);
-            if (power > 0.4f) PixelFx.Fan(feet, forward, reach * 1.1f, width, Palette.Red, count + 10, 0.36f, 0.26f);
+            PixelFx.Fan(feet, forward, reach * 0.85f, width, core, count, 0.2f, 0.18f);
+            PixelFx.Fan(feet, forward, reach, width, warm, count + 6, 0.28f, 0.22f);
+            if (power > 0.4f) PixelFx.Fan(feet, forward, reach * 1.1f, width, hot, count + 10, 0.36f, 0.26f);
             if (overload) PixelFx.Fan(feet, forward, reach * 0.6f, width + 10f, Palette.White, count, 0.14f, 0.2f);
         }
 
@@ -470,7 +475,7 @@ namespace HyperInfinite
             {
                 Vector3 direction = Quaternion.AngleAxis(Random.Range(-width, width), Vector3.up) * flat;
                 Vector3 at = ground + direction * Random.Range(1f, reach) + Vector3.up * Random.Range(0.2f, 1.8f);
-                Color color = Random.value < 0.4f ? Palette.Amber : Random.value < 0.6f ? Palette.Red : Palette.Yellow;
+                Color color = Random.value < 0.4f ? warm : Random.value < 0.6f ? hot : core;
                 PixelFx.Mote(at, Vector3.up * Random.Range(0.4f, 0.9f) + direction * 0.5f, color, Random.Range(0.05f, 0.08f), Random.Range(0.6f, 1f));
             }
         }
@@ -482,9 +487,9 @@ namespace HyperInfinite
         void Flare(Vector3 point, Vector3 travel, float power, bool overload, int index)
         {
             int pieces = index < 6 ? 8 : index < 14 ? 5 : 3;
-            PixelFx.Flash(point, index % 2 == 0 ? Palette.White : Palette.Yellow, 0.4f + 0.3f * power + (overload ? 0.15f : 0f), 0.07f);
-            PixelFx.Cone(point, travel, 40f, Palette.Amber, Palette.Red, pieces, 4f + 4f * power, 0.35f, 0.11f);
-            PixelFx.Sparks(point, -travel.normalized, Palette.Yellow, pieces / 2 + 1, 5f, 0.25f);
+            PixelFx.Flash(point, index % 2 == 0 ? Palette.White : core, 0.4f + 0.3f * power + (overload ? 0.15f : 0f), 0.07f);
+            PixelFx.Cone(point, travel, 40f, warm, hot, pieces, 4f + 4f * power, 0.35f, 0.11f);
+            PixelFx.Sparks(point, -travel.normalized, core, pieces / 2 + 1, 5f, 0.25f);
         }
 
         /// <summary>The bash into the floor: a shockwave all round where it lands, and you're thrown upward.</summary>
@@ -509,9 +514,9 @@ namespace HyperInfinite
             if (motor) motor.Launch(Mathf.Sqrt(2f * motor.Gravity * Mathf.Lerp(blastJumpHeight.x, blastJumpHeight.y, power)));
 
             PixelFx.Flash(ground + Vector3.up * 0.2f, Palette.White, 0.6f + 0.5f * power, 0.07f);
-            PixelFx.Ring(ground, radius, power > 0.5f ? Palette.Red : Palette.Amber, Mathf.RoundToInt(20f + 20f * power), 0.3f, 0.24f);
-            PixelFx.Ring(ground, radius * 0.55f, Palette.Yellow, 16, 0.22f, 0.18f);
-            PixelFx.Burst(ground + Vector3.up * 0.2f, Palette.Amber, Palette.Red, Mathf.RoundToInt(12f + 24f * power), 5f + 5f * power, 0.4f, 0.14f);
+            PixelFx.Ring(ground, radius, power > 0.5f ? hot : warm, Mathf.RoundToInt(20f + 20f * power), 0.3f, 0.24f);
+            PixelFx.Ring(ground, radius * 0.55f, core, 16, 0.22f, 0.18f);
+            PixelFx.Burst(ground + Vector3.up * 0.2f, warm, hot, Mathf.RoundToInt(12f + 24f * power), 5f + 5f * power, 0.4f, 0.14f);
             if (overload) PixelFx.Ring(ground, radius * 1.3f, Palette.White, 24, 0.18f, 0.2f);
             onBlastJump.Invoke();
         }

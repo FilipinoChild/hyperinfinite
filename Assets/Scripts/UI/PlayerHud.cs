@@ -25,6 +25,9 @@ namespace HyperInfinite
     ///
     /// Top middle, while a Boss is in the fight, is the boss bar with its name and health (BossBar).
     ///
+    /// While HYPER is on, a HYPER panel sits above the HP panel with the time left, and the screen's edges glow
+    /// cyan (HyperHud).
+    ///
     /// Getting hurt and going down are drawn by two helpers this makes: HurtOverlay (the red border and
     /// the arrows that point at whatever hit you) and DeathScreen (the Respawn button). PlayerRespawn
     /// does the actual respawning.
@@ -84,6 +87,7 @@ namespace HyperInfinite
 
         // Top middle.
         BossBar bossBar;
+        HyperHud hyperHud;
 
         void Awake()
         {
@@ -141,6 +145,8 @@ namespace HyperInfinite
             BuildMeters(root);
             BuildWaveCounter(root);
             bossBar = new BossBar(root);
+            var hyper = GetComponent<HyperPower>();
+            if (hyper) hyperHud = new HyperHud(root, hyper);
             BuildCrosshair(root);
             BuildHeatGauge(root);
             if (respawn) deathScreen = new DeathScreen(root, respawn, Respawn);   // last, so it covers everything else
@@ -258,6 +264,7 @@ namespace HyperInfinite
             }
             UpdateWaveCounter(dt);
             bossBar.Tick(dt);
+            hyperHud?.Tick(dt);
             UpdateMeters(dt);
         }
 
