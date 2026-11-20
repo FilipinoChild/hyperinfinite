@@ -1770,9 +1770,11 @@ MonoBehaviour:
   - {fileID: 871841768}
   firstPackSize: 6
   packGrowth: 3
-  maxPackSize: 16
-  packsToSpawn: 5
+  maxPackSize: 20
+  packsToSpawn: 6
   timeBetweenPacks: 3
+  nextPackWhenLeft: 3
+  maxAlive: 22
   clusterRadius: 1.5
   splitAbove: 8
   onPackSpawned:
