@@ -374,8 +374,13 @@ namespace HyperInfinite
                 if (!hitEnemy && p.target is Component part && part.TryGetComponent(out Health life) && !life.IsDead) hitEnemy = true;
                 p.target.TakeDamage(new DamageInfo
                 {
-                    Amount = p.damage, Kind = DamageKind.Shotgun, Point = p.point, Direction = forward,
-                    Distance = p.distance, Hits = p.bolts, Source = shooter.gameObject,
+                    Amount = p.damage,
+                    Kind = DamageKind.Shotgun,
+                    Point = p.point,
+                    Direction = forward,
+                    Distance = p.distance,
+                    Hits = p.bolts,
+                    Source = shooter.gameObject,
                 });
                 report.Damage += p.damage;
                 if (p.damage > most)
@@ -416,8 +421,12 @@ namespace HyperInfinite
             var component = target as Component;
             pending.Add(new Pending
             {
-                target = target, name = component ? component.name : "target", damage = damage,
-                distance = hit.distance, bolts = 1, point = hit.point,
+                target = target,
+                name = component ? component.name : "target",
+                damage = damage,
+                distance = hit.distance,
+                bolts = 1,
+                point = hit.point,
             });
         }
 

@@ -155,8 +155,8 @@ namespace HyperInfinite
         readonly List<IDamageable> struck = new List<IDamageable>(16);
         // The heavy bash's three colors: amber heat normally, cyan and white under HYPER.
         Color core = Palette.Yellow, warm = Palette.Amber, hot = Palette.Red;
-        int kills;          // what the heavy bash under way has killed so far
-        Vector3 killSum;
+        int kills;          // what the heavy bash under way has killed so far, and where
+        readonly Vector3[] killPoints = new Vector3[32];
         readonly List<Collider> struckBy = new List<Collider>(16);
         EnergyBlastShotgun shotgun;
         PlayerControls controls;
@@ -181,7 +181,7 @@ namespace HyperInfinite
         public float LastHeavyPower { get; private set; }
         /// <summary>True if the last heavy bash came from a redlined gun.</summary>
         public bool LastHeavyOverload { get; private set; }
-        /// <summary>How many the last heavy bash killed, counting its brand bursts, and the middle of where they fell.</summary>
+        /// <summary>How many the last heavy bash killed, counting its brand bursts, and where the most of them fell close together.</summary>
         public int LastHeavyKills { get; private set; }
         public Vector3 LastHeavyKillPoint { get; private set; }
         /// <summary>True if the last heavy bash was thrown while HYPER was on.</summary>
@@ -397,7 +397,6 @@ namespace HyperInfinite
             warm = boosted ? Palette.PaleCyan : Palette.Amber;
             hot = boosted ? Palette.Cyan : Palette.Red;
             kills = 0;
-            killSum = Vector3.zero;
 
             Vector3 origin = view.position, forward = view.forward;
             float damage = (heavyDamage + heavyHeatDamage * heat) * (overload ? overloadDamage : 1f);
@@ -414,7 +413,7 @@ namespace HyperInfinite
 
             int burst = Detonate(heat);
             LastHeavyKills = kills;
-            if (kills > 0) LastHeavyKillPoint = killSum / kills;
+            if (kills > 0) LastHeavyKillPoint = Densest();
             onHeavyBash.Invoke(power);
             if (kills > 0) onHeavyKills.Invoke(kills);
             onRecoil.Invoke(Mathf.Lerp(2.5f, 7f, power) + (burst > 0 ? 1f : 0f));
@@ -720,8 +719,8 @@ namespace HyperInfinite
             });
             if (wasAlive && life.IsDead)   // only enemies with health count, so a burst of hatchlings can't fake a multi-kill
             {
+                if (kills < killPoints.Length) killPoints[kills] = point;
                 kills++;
-                killSum += point;
             }
         }
 
@@ -737,6 +736,32 @@ namespace HyperInfinite
             ApplyBrand(c, target);
             PixelFx.Flash(point, Palette.PaleCyan, 0.5f, 0.06f);
             PixelFx.Cone(point, throwVelocity, 40f, Palette.Cyan, Palette.White, 8, 5f, 0.3f, 0.1f);
+        }
+
+        /// <summary>
+        /// Where the most of the last heavy bash's kills fell close together: the middle of the biggest group within
+        /// 3 m of one of them. A wide cone can kill two groups with empty ground between; this picks the bigger one.
+        /// </summary>
+        Vector3 Densest()
+        {
+            int count = Mathf.Min(kills, killPoints.Length), best = 0, bestNear = 0;
+            const float near = 3f * 3f;
+            for (int i = 0; i < count; i++)
+            {
+                int n = 0;
+                for (int j = 0; j < count; j++)
+                    if ((killPoints[i] - killPoints[j]).sqrMagnitude <= near) n++;
+                if (n > bestNear) { bestNear = n; best = i; }
+            }
+            Vector3 sum = Vector3.zero;
+            int used = 0;
+            for (int j = 0; j < count; j++)
+            {
+                if ((killPoints[best] - killPoints[j]).sqrMagnitude > near) continue;
+                sum += killPoints[j];
+                used++;
+            }
+            return used > 0 ? sum / used : killPoints[best];
         }
 
         static void Shove(Collider c, Vector3 velocity)

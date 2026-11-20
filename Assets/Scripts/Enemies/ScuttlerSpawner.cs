@@ -8,7 +8,7 @@ namespace HyperInfinite
     /// Sends packs of Scuttlers in waves, each bigger than the one before. The next pack doesn't wait for the
     /// last to be wiped out: it comes once only a few are left, so the fight never goes quiet. It also waits
     /// while there's no room under a cap on how many can be alive at once. A big pack splits between two
-    /// spawn points.
+    /// spawn points. From a chosen pack on, Spitters come along and hang back behind the Scuttlers.
     public class ScuttlerSpawner : MonoBehaviour
     {
         [Header("What and where")]
@@ -34,13 +34,25 @@ namespace HyperInfinite
         [Tooltip("A pack bigger than this splits between two spawn points, so it comes at you from two sides. 0 never splits.")]
         [SerializeField, Min(0)] int splitAbove = 8;
 
+        [Header("Ranged support")]   // SPITTER
+        [Tooltip("The Spitter prefab. Leave empty for Scuttler-only packs.")]
+        [SerializeField] GameObject spitterPrefab;
+        [Tooltip("Spitters join packs from this pack number on (1 = the first pack).")]
+        [SerializeField, Min(1)] int spittersFromPack = 2;
+        [SerializeField, Min(0)] int spittersPerPack = 1;
+
+        [Tooltip("How many more Spitters each new pack has.")]
+        [SerializeField, Min(0)] int spitterGrowth = 1;
+        [SerializeField, Min(0)] int maxSpittersPerPack = 4;
+
         [Header("Events")]
         [Tooltip("Sent with the pack number, starting at 1.")]
         public UnityEvent<int> onPackSpawned = new UnityEvent<int>();
         [Tooltip("Every pack has been sent and killed. The boss fight can start here.")]
         public UnityEvent onAllPacksCleared = new UnityEvent();
 
-        readonly List<GameObject> alive = new List<GameObject>();   // every Scuttler this spawner sent that's still alive
+        readonly List<GameObject> alive = new List<GameObject>();   // every enemy this spawner sent that's still alive
+        readonly List<GameObject> lastPack = new List<GameObject>(24);   // the pack just sent, Spitters included
         int packsSpawned;
         float timer;
         bool cleared, waiting;
@@ -50,7 +62,7 @@ namespace HyperInfinite
         public int Wave => packsSpawned;
         /// <summary>How many waves there are in all; 0 means they keep coming.</summary>
         public int TotalWaves => packsToSpawn;
-        /// <summary>Scuttlers this spawner sent that are still alive, from any wave.</summary>
+        /// <summary>Enemies this spawner sent that are still alive, from any wave.</summary>
         public int ScuttlersLeft
         {
             get
@@ -64,6 +76,8 @@ namespace HyperInfinite
         public float NextWaveIn => waiting && !cleared ? Mathf.Max(0f, timer) : 0f;
         /// <summary>Every wave has been sent and killed.</summary>
         public bool AllCleared => cleared;
+        /// <summary>The enemies of the pack just sent, Spitters included, for whatever listens to onPackSpawned (PowerUpDrops' safety net).</summary>
+        public IReadOnlyList<GameObject> LastPack => lastPack;
 
         void Update()
         {
@@ -117,6 +131,7 @@ namespace HyperInfinite
 
             int count = spawnPoints.Length;
             int first = Random.Range(0, count);
+            lastPack.Clear();
             int size = PackSize(packsSpawned);
             // A big pack splits: every other Scuttler comes from a second, different spawn point.
             int second = splitAbove > 0 && size > splitAbove && count > 1 ? (first + Random.Range(1, count)) % count : first;
@@ -130,7 +145,28 @@ namespace HyperInfinite
                 if (NavMesh.SamplePosition(position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
                     position = hit.position;
 
-                alive.Add(Instantiate(scuttlerPrefab, position, point.rotation));
+                GameObject scuttler = Instantiate(scuttlerPrefab, position, point.rotation);
+                alive.Add(scuttler);
+                lastPack.Add(scuttler);
+            }
+
+            // SPITTER: from a chosen pack on, Spitters hang back behind the pack's first spawn point
+            if (spitterPrefab && packsSpawned + 1 >= spittersFromPack)
+            {
+                Transform spitterPoint = spawnPoints[first];
+                // How many Spitters this pack gets: starts at Spitters Per Pack, then grows each pack
+                int packsWithSpitters = packsSpawned + 1 - spittersFromPack;
+                int spitterCount = Mathf.Min(maxSpittersPerPack, spittersPerPack + spitterGrowth * packsWithSpitters);
+                for (int i = 0; i < spitterCount; i++)
+                {
+                    Vector3 spot = spitterPoint.position - spitterPoint.forward * 3f
+                                 + spitterPoint.right * (i * 2f - (spitterCount - 1));
+                    if (NavMesh.SamplePosition(spot, out NavMeshHit spitterHit, 3f, NavMesh.AllAreas))
+                        spot = spitterHit.position;
+                    GameObject spitter = Instantiate(spitterPrefab, spot, spitterPoint.rotation);
+                    alive.Add(spitter);
+                    lastPack.Add(spitter);   // a Spitter is part of its wave, for the HYPER safety net too
+                }
             }
 
             packsSpawned++;

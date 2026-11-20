@@ -24,6 +24,7 @@ namespace HyperInfinite
         PlayerControls controls;
         PlayerMotor motor;
         HyperPower hyper;
+        PowerUpDrops drops;
         EnergyBlastShotgun shotgun;
         Health health;
         Camera view;
@@ -86,6 +87,7 @@ namespace HyperInfinite
             if (!health && controls) health = controls.GetComponent<Health>();
             if (!view && controls) view = controls.GetComponentInChildren<Camera>();
             if (!hyper && controls) hyper = controls.GetComponent<HyperPower>();
+            if (!drops) drops = FindAnyObjectByType<PowerUpDrops>();
         }
 
         void OnGUI()
@@ -153,6 +155,7 @@ namespace HyperInfinite
             bool ready = motor.DashReadiness >= 1f;
             Meter("Dash", motor.DashReadiness, ready ? ChipOn : ChipOff, ready ? "ready" : "cooling");
             if (hyper) Line(hyper.IsActive ? $"<color=#31c8ff><b>HYPER</b> {hyper.Remaining:0.0} s</color>  ·  speed x{motor.SpeedScale:0.00}" : "HYPER off  ·  F2 turns it on");
+            if (drops) Line(drops.Describe(), small);
         }
 
         void DrawShotgun()
