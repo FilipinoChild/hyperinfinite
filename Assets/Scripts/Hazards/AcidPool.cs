@@ -39,6 +39,7 @@ namespace HyperInfinite
                 foreach (IDamageable target in inside)
                 {
                     if (target is Object obj && obj == null) continue;   
+                    if (target is Component part && part.GetComponentInParent<PlayerControls>()) Sfx.Play(Sound.AcidSizzle);   // burning your feet
                     target.TakeDamage(new DamageInfo
                     {
                         Amount = damagePerTick,

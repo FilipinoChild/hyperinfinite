@@ -52,6 +52,7 @@ namespace HyperInfinite
                         });
                     }
                 }
+                Sfx.At(Sound.GlobSplat, hit.point);
                 Destroy(gameObject);   // splat on whatever it hit
                 return;
             }

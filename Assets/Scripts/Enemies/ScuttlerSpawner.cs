@@ -168,6 +168,9 @@ namespace HyperInfinite
                     lastPack.Add(spitter);   // a Spitter is part of its wave, for the HYPER safety net too
                 }
             }
+            // The skitter of many legs from where they come in, so a pack arriving behind you can be heard.
+            Sfx.At(Sound.PackSpawn, spawnPoints[first].position);
+            if (second != first) Sfx.At(Sound.PackSpawn, spawnPoints[second].position);
 
             packsSpawned++;
             onPackSpawned.Invoke(packsSpawned);

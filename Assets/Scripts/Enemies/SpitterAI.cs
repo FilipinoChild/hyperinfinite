@@ -142,6 +142,7 @@ namespace HyperInfinite
             state = State.Aiming;
             stateTimer = aimTime;
             agent.isStopped = true;   // plant its feet
+            Sfx.At(Sound.SpitterAim, transform.position + Vector3.up * spitHeight);   // a gurgle: the warning before the shot
         }
 
         void Fire()
@@ -156,6 +157,7 @@ namespace HyperInfinite
             Vector3 mouth = transform.position + Vector3.up * spitHeight;
             Vector3 aimPoint = player.position + Vector3.up * 1.2f + playerVelocity * leadTime;
 
+            Sfx.At(Sound.SpitterSpit, mouth);
             SpitterGlob glob = Instantiate(globPrefab, mouth, Quaternion.identity);
             glob.Launch(aimPoint - mouth, gameObject);
         }

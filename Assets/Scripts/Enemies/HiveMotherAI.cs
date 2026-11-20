@@ -150,6 +150,7 @@ namespace HyperInfinite
             stateTimer = slamWindup;
             agent.isStopped = true;                   // plant her feet
             if (slamWarning) slamWarning.SetActive(true);
+            Sfx.At(Sound.HiveWindup, transform.position);   // a rumble that builds for as long as the windup lasts
             // A ring of sparks sweeps out to the edge of the slam, and another halfway through
             secondPulse = false;
             PixelFx.Ring(transform.position, slamRadius, Palette.Yellow, 36, Mathf.Max(0.1f, slamWindup * 0.45f), 0.24f);
@@ -189,6 +190,7 @@ namespace HyperInfinite
             }
             PixelFx.Ring(transform.position, slamRadius, Palette.Red, 44, 0.25f, 0.34f);
             PixelFx.Ring(transform.position, slamRadius * 0.55f, Palette.Yellow, 24, 0.2f, 0.24f);
+            Sfx.At(Sound.HiveSlam, transform.position);
             PixelFx.Burst(transform.position + Vector3.up * 0.3f, Palette.Navy, Palette.White, 24, 7f, 0.5f, 0.2f);
 
             // The slam travels along the ground, so a player in the air dodges it. Standing on a
@@ -231,6 +233,7 @@ namespace HyperInfinite
             }
             Vector3 middle = transform.position + Vector3.up * 1.2f;
             PixelFx.Burst(middle, Palette.Yellow, Palette.White, 18, 6f, 0.4f, 0.16f);
+            Sfx.At(Sound.HiveStagger, middle);
             PixelFx.Ring(transform.position, 2.5f, Palette.Yellow, 20, 0.3f, 0.2f);
             return true;
         }
@@ -240,6 +243,7 @@ namespace HyperInfinite
         {
             enraged = true;
             Vector3 middle = transform.position + Vector3.up * 1.2f;
+            Sfx.At(Sound.HiveEnrage, middle);
             PixelFx.Burst(middle, Palette.Red, Palette.DarkRed, 30, 8f, 0.5f, 0.18f);
             PixelFx.Ring(transform.position, slamRadius, Palette.Red, 40, 0.4f, 0.26f);
             PixelFx.Ring(transform.position, slamRadius * 0.5f, Palette.Yellow, 24, 0.3f, 0.2f);
@@ -251,6 +255,7 @@ namespace HyperInfinite
             if (!scuttlerPrefab) return;
             summoned.RemoveAll(s => s == null);   // a destroyed Scuttler counts as null
             int count = Mathf.Min(summonCount + (enraged ? enragedExtraSummons : 0), maxSummoned - summoned.Count);
+            if (count > 0) Sfx.At(Sound.HiveSummon, transform.position + Vector3.up * 1.2f);   // she calls her brood
             for (int i = 0; i < count; i++)
             {
                 // Space them evenly in a circle around her

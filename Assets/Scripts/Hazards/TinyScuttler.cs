@@ -83,6 +83,7 @@ namespace HyperInfinite
         {
             if (withering) return;
             PixelFx.Burst(transform.position + Vector3.up * 0.2f, Palette.Red, Palette.Navy, 8, 3.5f, 0.35f, 0.09f);   // bits of its sprite
+            Sfx.At(Sound.HatchlingPop, transform.position);
             Destroy(gameObject);
         }
 
