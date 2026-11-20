@@ -347,6 +347,8 @@ GameObject:
   - component: {fileID: 6424291177758514348}
   - component: {fileID: 2563880385009337540}
   - component: {fileID: 3965906788310245636}
+  - component: {fileID: 4972406863639252820}
+  - component: {fileID: 7316024981457302845}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -721,5 +723,62 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   onRecoil:
+    m_PersistentCalls:
+      m_Calls: []
+  onHeavyKills:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &4972406863639252820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2578396166189733540}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44084db99647441fa090d510ee39dba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.HyperPower
+  duration: 15
+  perKill: 1
+  maxDuration: 25
+  speedBoost: 1.3
+  reachBoost: 1.4
+  extraWidth: 15
+  lungeBoost: 1.75
+  ramRadius: 1.6
+  ramDamage: 15
+  ramPush: 9
+  onHyperStart:
+    m_PersistentCalls:
+      m_Calls: []
+  onHyperEnd:
+    m_PersistentCalls:
+      m_Calls: []
+  onExtended:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &7316024981457302845
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2578396166189733540}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6ecc81fcd9e4af58fb43215773440aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.HeartShards
+  perKill: 3
+  healEach: 2
+  popTime: 0.4
+  flySpeed: 20
+  size: 0.36
+  onDropped:
+    m_PersistentCalls:
+      m_Calls: []
+  onCollected:
     m_PersistentCalls:
       m_Calls: []

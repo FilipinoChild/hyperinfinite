@@ -130,11 +130,14 @@ namespace HyperInfinite
         public UnityEvent onBrandBurst = new UnityEvent();
         [Tooltip("Sent with the kick in degrees, for the camera.")]
         public UnityEvent<float> onRecoil = new UnityEvent<float>();
+        [Tooltip("A heavy bash killed something, counting its brand bursts. Sent with how many it killed.")]
+        public UnityEvent<int> onHeavyKills = new UnityEvent<int>();
 
         struct Brand
         {
             public Collider collider;
             public IDamageable target;
+            public Health life;
             public float until, nextEmber, since;
         }
 
@@ -150,11 +153,16 @@ namespace HyperInfinite
         GameObject markHolder;
         Material markMaterial;
         readonly List<IDamageable> struck = new List<IDamageable>(16);
+        // The heavy bash's three colors: amber heat normally, cyan and white under HYPER.
+        Color core = Palette.Yellow, warm = Palette.Amber, hot = Palette.Red;
+        int kills;          // what the heavy bash under way has killed so far
+        Vector3 killSum;
         readonly List<Collider> struckBy = new List<Collider>(16);
         EnergyBlastShotgun shotgun;
         PlayerControls controls;
         PlayerMotor motor;
         Health health;
+        HyperPower hyper;
         Transform view, player;
         float readyAt, landAt, pendingHeat;
         bool lunging, pendingOverload;
@@ -173,12 +181,30 @@ namespace HyperInfinite
         public float LastHeavyPower { get; private set; }
         /// <summary>True if the last heavy bash came from a redlined gun.</summary>
         public bool LastHeavyOverload { get; private set; }
+        /// <summary>How many the last heavy bash killed, counting its brand bursts, and the middle of where they fell.</summary>
+        public int LastHeavyKills { get; private set; }
+        public Vector3 LastHeavyKillPoint { get; private set; }
+        /// <summary>True if the last heavy bash was thrown while HYPER was on.</summary>
+        public bool LastHeavyHyper { get; private set; }
         /// <summary>When a bash or heavy bash last hurt something.</summary>
         public float LastHitTime { get; private set; } = -100f;
         /// <summary>True if the last bash connected.</summary>
         public bool LastBashLanded => LastHitTime >= LastBashTime;
         /// <summary>How many enemies are branded right now.</summary>
         public int BrandCount { get; private set; }
+
+        /// <summary>
+        /// True if <paramref name="enemy"/> carries a brand. Still true in the moment it dies, so whatever listens
+        /// for deaths (HeartShards) can tell a branded kill; the brand goes out after that.
+        /// </summary>
+        public bool IsBranded(Health enemy)
+        {
+            if (!enemy) return false;
+            float now = Time.time;
+            for (int i = 0; i < MaxBrands; i++)
+                if (brands[i].life == enemy && brands[i].collider && now < brands[i].until) return true;
+            return false;
+        }
 
         bool IsDown => health && health.IsDead;
 
@@ -191,6 +217,7 @@ namespace HyperInfinite
             var eyes = GetComponentInParent<Camera>();
             view = eyes ? eyes.transform : transform;
             player = controls ? controls.transform : transform.root;
+            hyper = GetComponentInParent<HyperPower>();
             BuildMarks();
         }
 
@@ -347,9 +374,11 @@ namespace HyperInfinite
                 Land(heat, overload, true);
                 return;
             }
-            motor.Lunge(forward, lungeSpeed, lungeTime);
+            float lunge = lungeTime * (hyper ? hyper.LungeBoost : 1f);   // HYPER: chain lunges reach further
+            motor.EndSlow();   // the charge's slowdown would otherwise linger into the lunge and shorten it
+            motor.Lunge(forward, lungeSpeed, lunge);
             lunging = true;
-            landAt = Time.time + lungeTime;
+            landAt = Time.time + lunge;
             pendingHeat = heat;
             pendingOverload = overload;
             readyAt = landAt + heavyCooldown;
@@ -362,13 +391,20 @@ namespace HyperInfinite
             LastHeavyTime = Time.time;
             LastHeavyPower = power;
             LastHeavyOverload = overload;
+            bool boosted = hyper && hyper.IsActive;
+            LastHeavyHyper = boosted;
+            core = boosted ? Palette.White : Palette.Yellow;
+            warm = boosted ? Palette.PaleCyan : Palette.Amber;
+            hot = boosted ? Palette.Cyan : Palette.Red;
+            kills = 0;
+            killSum = Vector3.zero;
 
             Vector3 origin = view.position, forward = view.forward;
             float damage = (heavyDamage + heavyHeatDamage * heat) * (overload ? overloadDamage : 1f);
             float push = Mathf.Lerp(heavyPush.x, heavyPush.y, power) + (overload ? overloadPush : 0f);
 
             // Aimed at the floor, close enough to touch it: the blast goes off underfoot and throws you up.
-            float reach = Mathf.Lerp(heavyRange.x, heavyRange.y, power) + (overload ? overloadReach : 0f);
+            float reach = (Mathf.Lerp(heavyRange.x, heavyRange.y, power) + (overload ? overloadReach : 0f)) * (boosted ? hyper.ReachBoost : 1f);
             RaycastHit floor = default;
             bool atFloor = mayHitFloor && forward.y < -Mathf.Sin(blastJumpPitch * Mathf.Deg2Rad)
                            && Raycasts.Nearest(origin, forward, reach + 0.5f, player, out floor, false)
@@ -377,14 +413,17 @@ namespace HyperInfinite
             else Blast(origin, forward, reach, power, damage, push, overload);
 
             int burst = Detonate(heat);
+            LastHeavyKills = kills;
+            if (kills > 0) LastHeavyKillPoint = killSum / kills;
             onHeavyBash.Invoke(power);
+            if (kills > 0) onHeavyKills.Invoke(kills);
             onRecoil.Invoke(Mathf.Lerp(2.5f, 7f, power) + (burst > 0 ? 1f : 0f));
         }
 
         /// <summary>The bash thrown forward: everything in the cone in front is hit, the hotter the harder, wider and further.</summary>
         void Blast(Vector3 origin, Vector3 forward, float reach, float power, float damage, float push, bool overload)
         {
-            float width = Mathf.Lerp(heavyWidth.x, heavyWidth.y, power) + (overload ? overloadWidth : 0f);
+            float width = Mathf.Lerp(heavyWidth.x, heavyWidth.y, power) + (overload ? overloadWidth : 0f) + (hyper ? hyper.ExtraWidth : 0f);
             Gather(origin, reach, origin);   // all round, then trimmed to the cone, so even the widest cone is covered
             int hits = 0;
             for (int i = 0; i < struck.Count; i++)
@@ -407,7 +446,7 @@ namespace HyperInfinite
 
             Vector3 muzzle = origin + forward * 0.9f - view.up * 0.15f;
             PixelFx.Flash(muzzle, Palette.White, 0.4f + 0.5f * power + (overload ? 0.3f : 0f), 0.07f);
-            PixelFx.Cone(muzzle, forward, width * 0.8f, power > 0.5f ? Palette.Red : Palette.Amber, Palette.Yellow,
+            PixelFx.Cone(muzzle, forward, width * 0.8f, power > 0.5f ? hot : warm, core,
                          Mathf.RoundToInt(16f + 40f * power), reach / 0.28f, 0.28f, 0.12f + 0.08f * power);
             HeatBolts(origin, muzzle, forward, reach, width, power, overload);
             Shockwave(forward, reach, width, power, overload);
@@ -425,7 +464,7 @@ namespace HyperInfinite
                 Vector3 direction = Quaternion.AngleAxis(across, up) * Quaternion.AngleAxis(Random.Range(-6f, 6f), view.right) * forward;
                 float length = reach * Random.Range(0.75f, 1f);
                 Vector3 end = Raycasts.Nearest(origin, direction, length, player, out RaycastHit wall, false) ? wall.point : origin + direction * length;
-                Color color = i % 3 == 0 ? Palette.Yellow : i % 3 == 1 ? Palette.Amber : Palette.Red;
+                Color color = i % 3 == 0 ? core : i % 3 == 1 ? warm : hot;
                 PixelFx.Bolt(muzzle, end, overload && i % 4 == 0 ? Palette.White : color, 0.07f + 0.05f * power, 0.12f + 0.06f * power);
             }
         }
@@ -435,9 +474,9 @@ namespace HyperInfinite
         {
             Vector3 feet = player.position;
             int count = Mathf.RoundToInt(16f + 22f * power);
-            PixelFx.Fan(feet, forward, reach * 0.85f, width, Palette.Yellow, count, 0.2f, 0.18f);
-            PixelFx.Fan(feet, forward, reach, width, Palette.Amber, count + 6, 0.28f, 0.22f);
-            if (power > 0.4f) PixelFx.Fan(feet, forward, reach * 1.1f, width, Palette.Red, count + 10, 0.36f, 0.26f);
+            PixelFx.Fan(feet, forward, reach * 0.85f, width, core, count, 0.2f, 0.18f);
+            PixelFx.Fan(feet, forward, reach, width, warm, count + 6, 0.28f, 0.22f);
+            if (power > 0.4f) PixelFx.Fan(feet, forward, reach * 1.1f, width, hot, count + 10, 0.36f, 0.26f);
             if (overload) PixelFx.Fan(feet, forward, reach * 0.6f, width + 10f, Palette.White, count, 0.14f, 0.2f);
         }
 
@@ -450,7 +489,7 @@ namespace HyperInfinite
             {
                 Vector3 direction = Quaternion.AngleAxis(Random.Range(-width, width), Vector3.up) * flat;
                 Vector3 at = ground + direction * Random.Range(1f, reach) + Vector3.up * Random.Range(0.2f, 1.8f);
-                Color color = Random.value < 0.4f ? Palette.Amber : Random.value < 0.6f ? Palette.Red : Palette.Yellow;
+                Color color = Random.value < 0.4f ? warm : Random.value < 0.6f ? hot : core;
                 PixelFx.Mote(at, Vector3.up * Random.Range(0.4f, 0.9f) + direction * 0.5f, color, Random.Range(0.05f, 0.08f), Random.Range(0.6f, 1f));
             }
         }
@@ -462,16 +501,16 @@ namespace HyperInfinite
         void Flare(Vector3 point, Vector3 travel, float power, bool overload, int index)
         {
             int pieces = index < 6 ? 8 : index < 14 ? 5 : 3;
-            PixelFx.Flash(point, index % 2 == 0 ? Palette.White : Palette.Yellow, 0.4f + 0.3f * power + (overload ? 0.15f : 0f), 0.07f);
-            PixelFx.Cone(point, travel, 40f, Palette.Amber, Palette.Red, pieces, 4f + 4f * power, 0.35f, 0.11f);
-            PixelFx.Sparks(point, -travel.normalized, Palette.Yellow, pieces / 2 + 1, 5f, 0.25f);
+            PixelFx.Flash(point, index % 2 == 0 ? Palette.White : core, 0.4f + 0.3f * power + (overload ? 0.15f : 0f), 0.07f);
+            PixelFx.Cone(point, travel, 40f, warm, hot, pieces, 4f + 4f * power, 0.35f, 0.11f);
+            PixelFx.Sparks(point, -travel.normalized, core, pieces / 2 + 1, 5f, 0.25f);
         }
 
         /// <summary>The bash into the floor: a shockwave all round where it lands, and you're thrown upward.</summary>
         void BlastJump(Vector3 ground, float power, float damage, float push, bool overload)
         {
             int hits = 0;
-            float radius = Mathf.Lerp(blastJumpRadius.x, blastJumpRadius.y, power);
+            float radius = Mathf.Lerp(blastJumpRadius.x, blastJumpRadius.y, power) * (hyper ? hyper.ReachBoost : 1f);
             Gather(ground, radius, ground);
             for (int i = 0; i < struck.Count; i++)
             {
@@ -489,9 +528,9 @@ namespace HyperInfinite
             if (motor) motor.Launch(Mathf.Sqrt(2f * motor.Gravity * Mathf.Lerp(blastJumpHeight.x, blastJumpHeight.y, power)));
 
             PixelFx.Flash(ground + Vector3.up * 0.2f, Palette.White, 0.6f + 0.5f * power, 0.07f);
-            PixelFx.Ring(ground, radius, power > 0.5f ? Palette.Red : Palette.Amber, Mathf.RoundToInt(20f + 20f * power), 0.3f, 0.24f);
-            PixelFx.Ring(ground, radius * 0.55f, Palette.Yellow, 16, 0.22f, 0.18f);
-            PixelFx.Burst(ground + Vector3.up * 0.2f, Palette.Amber, Palette.Red, Mathf.RoundToInt(12f + 24f * power), 5f + 5f * power, 0.4f, 0.14f);
+            PixelFx.Ring(ground, radius, power > 0.5f ? hot : warm, Mathf.RoundToInt(20f + 20f * power), 0.3f, 0.24f);
+            PixelFx.Ring(ground, radius * 0.55f, core, 16, 0.22f, 0.18f);
+            PixelFx.Burst(ground + Vector3.up * 0.2f, warm, hot, Mathf.RoundToInt(12f + 24f * power), 5f + 5f * power, 0.4f, 0.14f);
             if (overload) PixelFx.Ring(ground, radius * 1.3f, Palette.White, 24, 0.18f, 0.2f);
             onBlastJump.Invoke();
         }
@@ -509,7 +548,8 @@ namespace HyperInfinite
         /// <summary>Marks what a searing bash hit, if it's something with health. Brands on it already are renewed.</summary>
         void ApplyBrand(Collider c, IDamageable target)
         {
-            if (!c.GetComponentInParent<Health>()) return;   // eggs, webs and hatchlings go at the first hit anyway
+            var life = c.GetComponentInParent<Health>();
+            if (!life || life.IsDead) return;   // eggs, webs and hatchlings go at the first hit anyway
             int slot = -1;
             float oldest = float.PositiveInfinity;
             for (int i = 0; i < MaxBrands; i++)
@@ -522,7 +562,7 @@ namespace HyperInfinite
                     slot = i;
                 }
             }
-            brands[slot] = new Brand { collider = c, target = target, until = Time.time + brandTime, nextEmber = 0f, since = Time.time };
+            brands[slot] = new Brand { collider = c, target = target, life = life, until = Time.time + brandTime, nextEmber = 0f, since = Time.time };
         }
 
         /// <summary>
@@ -537,10 +577,11 @@ namespace HyperInfinite
             for (int i = 0; i < MaxBrands; i++)
             {
                 ref Brand b = ref brands[i];
-                if (!b.collider || now >= b.until)
+                if (!b.collider || now >= b.until || (b.life && b.life.IsDead))   // the brand goes out with its enemy
                 {
                     b.collider = null;
                     b.target = null;
+                    b.life = null;
                     ShowMark(i, false);
                     continue;
                 }
@@ -589,8 +630,6 @@ namespace HyperInfinite
                 if (!marked) continue;
                 Vector3 center = marked.bounds.center;
                 if ((center - me).sqrMagnitude > brandReach * brandReach) continue;   // out of reach: it keeps smouldering
-                brands[b].collider = null;
-                brands[b].target = null;
                 ShowMark(b, false);
                 burst++;
                 PixelFx.Bolt(muzzle, center, Palette.Amber, 0.07f, 0.16f);   // the heat races from the gun to the brand
@@ -603,6 +642,10 @@ namespace HyperInfinite
                     if (distance > brandRadius) continue;
                     Hit(struck[i], damage * (1f - 0.5f * Mathf.Clamp01(distance / brandRadius)), point, point - center, distance);
                 }
+                // Spent only now, so an enemy its own burst kills still counts as a branded kill.
+                brands[b].collider = null;
+                brands[b].target = null;
+                brands[b].life = null;
                 PixelFx.Flash(center, Palette.Amber, 0.8f, 0.07f);
                 PixelFx.Burst(center, Palette.Amber, Palette.Red, 16, 6f, 0.4f, 0.13f);
                 PixelFx.Ring(new Vector3(center.x, marked.bounds.min.y, center.z), brandRadius, Palette.Amber, 18, 0.25f, 0.18f);
@@ -663,12 +706,37 @@ namespace HyperInfinite
         void Hit(IDamageable target, float amount, Vector3 point, Vector3 direction, float distance)
         {
             LastHitTime = Time.time;
-            if (target is Component part && part.TryGetComponent(out Boss boss)) amount *= boss.MeleeTaken;   // bosses shrug off most of it
+            Health life = null;
+            if (target is Component part)
+            {
+                if (part.TryGetComponent(out Boss boss)) amount *= boss.MeleeTaken;   // bosses shrug off most of it
+                part.TryGetComponent(out life);
+            }
+            bool wasAlive = life && !life.IsDead;
             target.TakeDamage(new DamageInfo
             {
                 Amount = amount, Kind = DamageKind.Melee, Point = point, Direction = direction.normalized,
                 Distance = distance, Hits = 1, Source = player.gameObject,
             });
+            if (wasAlive && life.IsDead)   // only enemies with health count, so a burst of hatchlings can't fake a multi-kill
+            {
+                kills++;
+                killSum += point;
+            }
+        }
+
+        /// <summary>
+        /// A thruster ram (HyperPower): <paramref name="target"/> takes <paramref name="damage"/>, is thrown along
+        /// <paramref name="throwVelocity"/> and is branded, with a cyan flare where it was hit.
+        /// </summary>
+        public void Ram(Collider c, IDamageable target, Vector3 throwVelocity, float damage)
+        {
+            Vector3 point = c.bounds.center;
+            Hit(target, damage, point, throwVelocity, 0f);
+            Shove(c, throwVelocity);
+            ApplyBrand(c, target);
+            PixelFx.Flash(point, Palette.PaleCyan, 0.5f, 0.06f);
+            PixelFx.Cone(point, throwVelocity, 40f, Palette.Cyan, Palette.White, 8, 5f, 0.3f, 0.1f);
         }
 
         static void Shove(Collider c, Vector3 velocity)

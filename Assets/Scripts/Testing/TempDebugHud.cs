@@ -8,10 +8,13 @@ namespace HyperInfinite
     /// Drawn with IMGUI (OnGUI), so it needs no Canvas or UI package. F1 shows or hides the panel; it
     /// starts hidden and does no work until it's shown, so it can stay in a scene that ships.
     /// It finds what it reports on by itself, so it works in any scene that has the Player in it.
+    /// In the editor and development builds, F2 turns HYPER on for testing.
     /// </summary>
     public class TempDebugHud : MonoBehaviour
     {
         [SerializeField] Key togglePanel = Key.F1;
+        [Tooltip("Testing only, in the editor and development builds: turns HYPER on at once, without a core.")]
+        [SerializeField] Key giveHyper = Key.F2;
 
         static readonly Color PanelColor = new Color(0.04f, 0.04f, 0.06f, 0.62f);
         static readonly Color ChipOff = new Color(0.2f, 0.21f, 0.25f, 0.85f);
@@ -20,6 +23,7 @@ namespace HyperInfinite
 
         PlayerControls controls;
         PlayerMotor motor;
+        HyperPower hyper;
         EnergyBlastShotgun shotgun;
         Health health;
         Camera view;
@@ -42,6 +46,11 @@ namespace HyperInfinite
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard != null && togglePanel != Key.None && keyboard[togglePanel].wasPressedThisFrame) showPanel = !showPanel;
+            if (Debug.isDebugBuild && keyboard != null && giveHyper != Key.None && keyboard[giveHyper].wasPressedThisFrame)
+            {
+                if (!hyper) hyper = FindAnyObjectByType<HyperPower>();
+                if (hyper) hyper.Activate();
+            }
             if (!showPanel) return;
 
             findTimer -= Time.unscaledDeltaTime;
@@ -76,6 +85,7 @@ namespace HyperInfinite
             if (!shotgun) shotgun = FindAnyObjectByType<EnergyBlastShotgun>();
             if (!health && controls) health = controls.GetComponent<Health>();
             if (!view && controls) view = controls.GetComponentInChildren<Camera>();
+            if (!hyper && controls) hyper = controls.GetComponent<HyperPower>();
         }
 
         void OnGUI()
@@ -142,6 +152,7 @@ namespace HyperInfinite
             Line($"<b>Movement</b>  {motor.Speed:0.0} m/s  ·  {state}  ·  air jumps left {motor.AirJumpsLeft}");
             bool ready = motor.DashReadiness >= 1f;
             Meter("Dash", motor.DashReadiness, ready ? ChipOn : ChipOff, ready ? "ready" : "cooling");
+            if (hyper) Line(hyper.IsActive ? $"<color=#31c8ff><b>HYPER</b> {hyper.Remaining:0.0} s</color>  ·  speed x{motor.SpeedScale:0.00}" : "HYPER off  ·  F2 turns it on");
         }
 
         void DrawShotgun()
@@ -149,10 +160,11 @@ namespace HyperInfinite
             if (!shotgun) return;
             cursorY += 6f;
             string state = shotgun.IsRedlined ? "<color=#ff5a3c>REDLINED</color>"
+                         : shotgun.IsVentHealing ? $"<color=#5ce676>venting, healing {shotgun.VentHealLeft:0} more</color>"
                          : shotgun.IsVenting ? "<color=#ffb347>venting</color>"
                          : shotgun.CanFire ? "ready" : "lever cycling";
             string aim = shotgun.IsAiming ? "  ·  <color=#31c8ff>aiming</color>" : "";
-            Line($"<b>Energy Blast shotgun</b>  {shotgun.Bolts} bolts  ·  {shotgun.Spread:0.0}° spread  ·  heat {shotgun.Heat01 * 100f:0}%  ·  {state}{aim}");
+            Line($"<b>Energy Blast shotgun</b>  {shotgun.Bolts} bolts  ·  {shotgun.Spread:0.0}° spread  ·  heat {shotgun.Heat01 * 100f:0}% ({shotgun.HitHeat01 * 100f:0} from hits)  ·  {state}{aim}");
             ShotReport shot = shotgun.LastShot;
             if (shot.Time > 0f)
             {

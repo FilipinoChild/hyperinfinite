@@ -27,7 +27,10 @@ namespace HyperInfinite
         public static readonly Color Cyan = Hex(0x31C7FF);
         /// <summary>The paler cyan at the heart of an energy bolt.</summary>
         public static readonly Color PaleCyan = Hex(0xB8F1FF);
+        /// <summary>The HP bar's color, so healing is green too.</summary>
         public static readonly Color Green = Hex(0x5CE676);
+        /// <summary>The paler green at the heart of a heal.</summary>
+        public static readonly Color PaleGreen = Hex(0xC4FFCE);
         /// <summary>The Pulsating Eggs' shell, from the prototype.</summary>
         public static readonly Color EggPink = Hex(0xC9637A);
 

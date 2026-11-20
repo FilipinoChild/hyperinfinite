@@ -22,10 +22,14 @@ namespace HyperInfinite
     ///
     /// Heat is the only resource; there's no ammo. Every blast adds heat, and heat never fades by itself:
     /// getting rid of it is the player's choice. Reach 100 and the gun redlines. It won't fire again until
-    /// the heat goes, but nothing else is locked. There are two ways out. Venting (R) is safe but wastes
-    /// the heat, and you can't fire while it drains. ShotgunMelee spends it instead: a searing bash burns a
-    /// little, and a heavy bash dumps the lot in one explosion. Aiming (right mouse) tightens the cone so
-    /// more bolts land at range.
+    /// the heat goes, but nothing else is locked. There are two ways out. Venting (R) dumps the heat, and you
+    /// can't fire while it drains. ShotgunMelee spends it instead: a searing bash burns a little, and a heavy
+    /// bash dumps the lot in one explosion. Aiming (right mouse) tightens the cone so more bolts land at range.
+    ///
+    /// Venting a redlined gun heals you, so a full gauge is a choice: a crowd-clearing heavy bash, or health
+    /// back. Only heat from blasts that hit an enemy counts, so firing at nothing heals nothing: a full gauge
+    /// of hits gives back a quarter of your health. The healing comes in as the heat drains, and getting hurt
+    /// before the vent finishes cuts it short.
     ///
     /// Put this under the camera, next to ShotgunSprite, which draws the gun. Bolts fly from the camera's
     /// center, so they land around the crosshair; the bolts you see start at the emitters so they look
@@ -75,6 +79,10 @@ namespace HyperInfinite
         [Tooltip("Heat dumped per second while venting. You can't fire until the vent finishes.")]
         [SerializeField, Min(1f)] float ventRate = 140f;
 
+        [Header("Vent heal")]
+        [Tooltip("Share of your health a vent from redline gives back when every point of heat came from blasts that hit an enemy. Less heat from hits heals less.")]
+        [SerializeField, Range(0f, 1f)] float ventHeal = 0.25f;
+
         [Header("Recoil")]
         [Tooltip("Degrees the view kicks up per blast from the hip.")]
         [SerializeField, Range(0f, 15f)] float recoilHip = 4.6f;
@@ -103,6 +111,10 @@ namespace HyperInfinite
         public UnityEvent onVent = new UnityEvent();
         [Tooltip("The heat has all gone, by venting or a heavy bash, and the gun is ready again.")]
         public UnityEvent onCooled = new UnityEvent();
+        [Tooltip("A vent from redline started healing you.")]
+        public UnityEvent onVentHeal = new UnityEvent();
+        [Tooltip("Getting hurt cut a vent's healing short.")]
+        public UnityEvent onVentHealCut = new UnityEvent();
         [Tooltip("Sent with the kick in degrees, for the camera.")]
         public UnityEvent<float> onRecoil = new UnityEvent<float>();
 
@@ -119,6 +131,11 @@ namespace HyperInfinite
         float cycleTimer, flash, heat;
         int nextEmitter;
         bool venting;
+        // The vent heal: how much of the heat came from blasts that hit, and the heal under way.
+        Health health;
+        PlayerMotor motor;
+        float hitHeat, healTotal, healGiven, healStartedAt, nextHealMote;
+        bool healing;
 
         public int Bolts => bolts;
         public float MaxRange => range;
@@ -133,6 +150,16 @@ namespace HyperInfinite
         public float Heat01 => heat / 100f;
         /// <summary>Heat right now, 0 to 100.</summary>
         public float Heat => heat;
+        /// <summary>How much of the heat came from blasts that hit an enemy, 0 to 1 of a full gauge. Only this part heals when vented.</summary>
+        public float HitHeat01 => hitHeat / 100f;
+        /// <summary>What venting now would heal: something only while redlined and not yet venting.</summary>
+        public float VentHealReady => IsRedlined && !venting && health && !health.IsDead ? health.Max * ventHeal * HitHeat01 : 0f;
+        /// <summary>True while a vent from redline is healing you.</summary>
+        public bool IsVentHealing => healing;
+        /// <summary>What the heal under way still has to give.</summary>
+        public float VentHealLeft => healing ? healTotal - healGiven : 0f;
+        /// <summary>When getting hurt last cut a vent's healing short.</summary>
+        public float LastHealCutTime { get; private set; } = -100f;
         /// <summary>True when the next blast would redline the gun, so the heat gauge can flash a warning.</summary>
         public bool AboutToRedline => !IsRedlined && !venting && heat + heatPerShot >= 100f;
         public bool IsAiming { get; private set; }
@@ -152,6 +179,8 @@ namespace HyperInfinite
         void Awake()
         {
             if (!controls) controls = GetComponentInParent<PlayerControls>();
+            health = GetComponentInParent<Health>();
+            motor = GetComponentInParent<PlayerMotor>();
             if (!aimOrigin)
             {
                 var view = GetComponentInParent<Camera>();
@@ -184,8 +213,10 @@ namespace HyperInfinite
         public bool TryVent()
         {
             if (heat <= 0f || venting) return false;
+            float heal = VentHealReady;   // read before venting starts, while it still counts
             venting = true;
             onVent.Invoke();
+            if (heal > 0f) StartHeal(heal);
             return true;
         }
 
@@ -197,6 +228,7 @@ namespace HyperInfinite
         {
             float spent = Mathf.Clamp(amount, 0f, heat);
             if (spent <= 0f) return 0f;
+            hitHeat *= (heat - spent) / heat;   // what's left keeps the same share of heat from hits
             heat -= spent;
             if (heat <= 0f) Emptied();
             return spent;
@@ -214,8 +246,10 @@ namespace HyperInfinite
         public void CoolCompletely()
         {
             heat = 0f;
+            hitHeat = 0f;
             cycleTimer = 0f;
             venting = false;
+            healing = false;
         }
 
         /// <summary>Heat only goes down while venting: nothing cools the gun by itself.</summary>
@@ -223,14 +257,70 @@ namespace HyperInfinite
         {
             if (!venting) return;
             heat -= ventRate * dt;
+            if (healing) TendHeal();
             if (heat <= 0f) Emptied();
         }
 
         void Emptied()
         {
             heat = 0f;
+            hitHeat = 0f;
             venting = false;
+            healing = false;   // a heavy bash mid-vent takes what's left of the heal with it
             onCooled.Invoke();
+        }
+
+        // ---- The vent heal ---------------------------------------------------------------------
+
+        void StartHeal(float amount)
+        {
+            healing = true;
+            healTotal = amount;
+            healGiven = 0f;
+            healStartedAt = Time.time;
+            nextHealMote = 0f;
+            Transform feet = controls ? controls.transform : transform.root;
+            PixelFx.Ring(feet.position + Vector3.up * 0.05f, 1.2f, Palette.Green, 16, 0.3f, 0.12f);
+            PixelFx.Ring(feet.position + Vector3.up * 0.05f, 0.7f, Palette.PaleGreen, 12, 0.22f, 0.1f);
+            onVentHeal.Invoke();
+        }
+
+        /// <summary>The healing comes in as the heat drains, and stops for good if you're hurt first.</summary>
+        void TendHeal()
+        {
+            if (!health || health.IsDead || health.LastDamageTime > healStartedAt)
+            {
+                healing = false;
+                LastHealCutTime = Time.time;
+                Vector3 tip = HealTip();
+                PixelFx.Burst(tip, Palette.Red, Palette.Ink, 6, 1.2f, 0.25f, 0.02f);
+                onVentHealCut.Invoke();
+                return;
+            }
+            float due = healTotal * (1f - Mathf.Clamp01(heat / 100f));
+            if (due > healGiven)
+            {
+                health.Heal(due - healGiven);
+                healGiven = due;
+            }
+
+            // Green specks rise off the emitters as the heat goes, the heal drawn in the palette's green. They're
+            // half a meter from the eyes, so they move with you; otherwise running would leave them behind at once.
+            if (Time.time < nextHealMote) return;
+            nextHealMote = Time.time + 0.03f;
+            float pick = Random.value;
+            Color color = pick < 0.5f ? Palette.Green : pick < 0.85f ? Palette.PaleGreen : Palette.White;
+            Vector3 carried = motor ? motor.Velocity : Vector3.zero;
+            PixelFx.Mote(HealTip() + aimOrigin.right * Random.Range(-0.04f, 0.04f), carried + aimOrigin.up * Random.Range(0.25f, 0.45f),
+                         color, Random.Range(0.012f, 0.02f), Random.Range(0.3f, 0.45f));
+        }
+
+        /// <summary>One of the emitter tips, picked at random, for the heal's specks.</summary>
+        Vector3 HealTip()
+        {
+            if (emitters.Length == 0) return transform.position;
+            Transform tip = emitters[Random.Range(0, emitters.Length)];
+            return tip ? tip.position : transform.position;
         }
 
         void LateUpdate()
@@ -243,7 +333,8 @@ namespace HyperInfinite
             cycleTimer = cycleTime;
             Kick = 1f;
             flash = flashIntensity;
-            heat = Mathf.Min(100f, heat + heatPerShot);
+            float added = Mathf.Min(100f, heat + heatPerShot) - heat;
+            heat += added;
             bool redlinedNow = heat >= 100f;   // the blast that redlines still goes off
 
             Physics.SyncTransforms();   // targets moved this frame; make sure the rays see where they are now
@@ -276,8 +367,11 @@ namespace HyperInfinite
             // One hit per target with all its bolts added up, so a target sees the whole blast at once.
             var report = new ShotReport { Bolts = bolts, BoltsOnTarget = landed, Time = Time.time, Target = "" };
             float most = -1f;
+            bool hitEnemy = false;
             foreach (Pending p in pending)
             {
+                // Only living enemies count towards the vent heal, not eggs or webs.
+                if (!hitEnemy && p.target is Component part && part.TryGetComponent(out Health life) && !life.IsDead) hitEnemy = true;
                 p.target.TakeDamage(new DamageInfo
                 {
                     Amount = p.damage, Kind = DamageKind.Shotgun, Point = p.point, Direction = forward,
@@ -292,6 +386,7 @@ namespace HyperInfinite
                 }
             }
             LastShot = report;
+            if (hitEnemy) hitHeat = Mathf.Min(heat, hitHeat + added);
             onFire.Invoke();
             onRecoil.Invoke(Mathf.Lerp(recoilHip, recoilAim, AimBlend));
             if (redlinedNow) onRedline.Invoke();
