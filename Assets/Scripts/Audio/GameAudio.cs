@@ -7,7 +7,9 @@ namespace HyperInfinite
     /// The game's sound: sets up the sound effects (Sfx), plays the music, and keeps both volumes.
     ///
     /// It makes itself when the game starts and lasts across scenes, so no scene needs anything added for it,
-    /// and the title music carries on into the arena until the first wave.
+    /// and the title music carries on into the arena until the first wave. In each scene it finds the Player
+    /// and gives it a PlayerSounds, which hooks the Player's own events (the shotgun, the melee, the motor and
+    /// so on) up to their sounds.
     ///
     /// The music follows the game:
     ///  - The title theme on the title screen, and in the arena until the controls screen is closed.
@@ -157,6 +159,8 @@ namespace HyperInfinite
             clearPlayed = bossSeen = bossBeaten = false;
             clearAt = calmUntil = -1f;
             nextSearch = 0f;
+            var controls = FindAnyObjectByType<PlayerControls>();
+            if (controls && !controls.GetComponent<PlayerSounds>()) controls.gameObject.AddComponent<PlayerSounds>();
             Search();
         }
 
