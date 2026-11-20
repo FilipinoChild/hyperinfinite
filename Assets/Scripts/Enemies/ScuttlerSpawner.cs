@@ -9,6 +9,10 @@ namespace HyperInfinite
     /// last to be wiped out: it comes once only a few are left, so the fight never goes quiet. It also waits
     /// while there's no room under a cap on how many can be alive at once. A big pack splits between two
     /// spawn points. From a chosen pack on, Spitters come along and hang back behind the Scuttlers.
+    ///
+    /// Every newcomer is put somewhere it can walk to from its spawn point in a straight line, on the NavMesh and
+    /// inside the play area, so however many come, none ends up inside a wall or rock, on top of one, or outside
+    /// the arena. Spitters fill rings around the spawn point, the side away from the player first.
     public class ScuttlerSpawner : MonoBehaviour
     {
         [Header("What and where")]
@@ -44,6 +48,8 @@ namespace HyperInfinite
         [Tooltip("How many more Spitters each new pack has.")]
         [SerializeField, Min(0)] int spitterGrowth = 1;
         [SerializeField, Min(0)] int maxSpittersPerPack = 4;
+        [Tooltip("How far apart Spitters stand when they appear, in meters. A big group fills rings around the spawn point.")]
+        [SerializeField, Min(0.5f)] float spitterSpacing = 2f;
 
         [Header("Events")]
         [Tooltip("Sent with the pack number, starting at 1.")]
@@ -64,9 +70,15 @@ namespace HyperInfinite
 
         readonly List<GameObject> alive = new List<GameObject>();   // every enemy this spawner sent that's still alive
         readonly List<GameObject> lastPack = new List<GameObject>(24);   // the pack just sent, Spitters included
+        readonly List<Vector3> placed = new List<Vector3>(32);   // where this pack's Spitters will stand
         int packsSpawned;
         float timer;
         bool cleared, waiting;
+        Transform player;
+
+        const float WallInset = 1f;      // newcomers stand at least this far inside the play area's walls
+        const float MaxStep = 1.5f;      // nor higher or lower than their spawn point by more than this
+        const int SpitterRings = 6;      // rings tried around the spawn point before the rest share it
 
         // Read-only, for the HUD's wave counter.
         /// <summary>The wave in progress (the pack last sent), starting at 1; 0 before the first.</summary>
@@ -169,14 +181,16 @@ namespace HyperInfinite
             // A big pack splits: every other Scuttler comes from a second, different spawn point.
             int second = splitAbove > 0 && size > splitAbove && count > 1 ? (first + Random.Range(1, count)) % count : first;
 
+            Vector3 firstAnchor = Anchor(spawnPoints[first]);
+            Vector3 secondAnchor = second == first ? firstAnchor : Anchor(spawnPoints[second]);
             for (int i = 0; i < size; i++)
             {
-                Transform point = spawnPoints[i % 2 == 0 ? first : second];
-                // Scatter each Scuttler a little around the spawn point, on walkable ground
+                bool even = i % 2 == 0;
+                Transform point = spawnPoints[even ? first : second];
+                Vector3 anchor = even ? firstAnchor : secondAnchor;
+                // Scatter each Scuttler a little around the spawn point, on ground it can walk to from there
                 Vector2 offset = Random.insideUnitCircle * clusterRadius;
-                Vector3 position = point.position + new Vector3(offset.x, 0f, offset.y);
-                if (NavMesh.SamplePosition(position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
-                    position = hit.position;
+                Vector3 position = Walkable(anchor, anchor + new Vector3(offset.x, 0f, offset.y), out Vector3 spot) ? spot : anchor;
 
                 GameObject scuttler = Instantiate(scuttlerPrefab, position, point.rotation);
                 alive.Add(scuttler);
@@ -184,19 +198,17 @@ namespace HyperInfinite
             }
 
             // SPITTER: from a chosen pack on, Spitters hang back behind the pack's first spawn point
+            int spitterCount = 0;
             if (spitterPrefab && packsSpawned + 1 >= spittersFromPack)
             {
                 Transform spitterPoint = spawnPoints[first];
                 // How many Spitters this pack gets: starts at Spitters Per Pack, then grows each pack
                 int packsWithSpitters = packsSpawned + 1 - spittersFromPack;
-                int spitterCount = Mathf.Min(maxSpittersPerPack, spittersPerPack + spitterGrowth * packsWithSpitters);
+                spitterCount = Mathf.Min(maxSpittersPerPack, spittersPerPack + spitterGrowth * packsWithSpitters);
+                PlaceSpitters(firstAnchor, spitterCount);
                 for (int i = 0; i < spitterCount; i++)
                 {
-                    Vector3 spot = spitterPoint.position - spitterPoint.forward * 3f
-                                 + spitterPoint.right * (i * 2f - (spitterCount - 1));
-                    if (NavMesh.SamplePosition(spot, out NavMeshHit spitterHit, 3f, NavMesh.AllAreas))
-                        spot = spitterHit.position;
-                    GameObject spitter = Instantiate(spitterPrefab, spot, spitterPoint.rotation);
+                    GameObject spitter = Instantiate(spitterPrefab, placed[i], spitterPoint.rotation);
                     alive.Add(spitter);
                     lastPack.Add(spitter);   // a Spitter is part of its wave, for the HYPER safety net too
                 }
@@ -209,7 +221,80 @@ namespace HyperInfinite
             record.members.AddRange(lastPack);
             packs.Add(record);
             onPackSpawned.Invoke(packsSpawned);
-            Debug.Log("Pack " + packsSpawned + ": " + size + " Scuttlers");
+            Debug.Log("Pack " + packsSpawned + ": " + size + " Scuttlers, " + spitterCount + " Spitters");
+        }
+
+        /// <summary>The spawn point's place on the NavMesh, which every newcomer from it must be able to walk to.</summary>
+        static Vector3 Anchor(Transform point)
+        {
+            return NavMesh.SamplePosition(point.position, out NavMeshHit hit, 3f, NavMesh.AllAreas) ? hit.position : point.position;
+        }
+
+        /// <summary>
+        /// True if something can stand near <paramref name="wanted"/>, and where: on the NavMesh, inside the play area,
+        /// about as high as <paramref name="anchor"/>, and with a straight walk to it from there that crosses no
+        /// wall, rock or drop. A spot past a wall, inside a rock or on top of one fails.
+        /// </summary>
+        static bool Walkable(Vector3 anchor, Vector3 wanted, out Vector3 spot)
+        {
+            spot = anchor;
+            if (!NavMesh.SamplePosition(wanted, out NavMeshHit hit, 1f, NavMesh.AllAreas)) return false;
+            if (Mathf.Abs(hit.position.y - anchor.y) > MaxStep) return false;
+            PlayArea area = PlayArea.Current;
+            if (area && !area.Contains(hit.position, -WallInset)) return false;
+            if (NavMesh.Raycast(anchor, hit.position, out _, NavMesh.AllAreas)) return false;
+            spot = hit.position;
+            return true;
+        }
+
+        /// <summary>
+        /// Fills <see cref="placed"/> with where <paramref name="count"/> Spitters stand: rings around the spawn point,
+        /// from the inside out, about <see cref="spitterSpacing"/> apart, each on ground it can walk to. The half of
+        /// each ring away from the player fills first, so they hang back behind the Scuttlers. If the spawn point is
+        /// too hemmed in for them all, the rest share it, and their agents push them apart.
+        /// </summary>
+        void PlaceSpitters(Vector3 anchor, int count)
+        {
+            placed.Clear();
+            if (!player)
+            {
+                var controls = FindAnyObjectByType<PlayerControls>();
+                if (controls) player = controls.transform;
+            }
+            // The direction away from the player, as an angle; any if there's no player.
+            float back = Random.value * Mathf.PI * 2f;
+            if (player)
+            {
+                Vector3 away = anchor - player.position;
+                if (away.x * away.x + away.z * away.z > 0.01f) back = Mathf.Atan2(away.z, away.x);
+            }
+            float apart = spitterSpacing * 0.8f;   // a spot can move a little onto the NavMesh
+            for (int pass = 0; pass < 2 && placed.Count < count; pass++)   // the back halves, then the rest
+            {
+                for (int ring = 1; ring <= SpitterRings && placed.Count < count; ring++)
+                {
+                    float radius = clusterRadius + ring * spitterSpacing;
+                    int slots = Mathf.Max(6, Mathf.FloorToInt(2f * Mathf.PI * radius / spitterSpacing));
+                    for (int k = 0; k < slots && placed.Count < count; k++)
+                    {
+                        // Out from straight behind, alternating sides: 0, +1, -1, +2, -2 ...
+                        int step = (k + 1) / 2 * (k % 2 == 0 ? 1 : -1);
+                        float turn = step * 2f * Mathf.PI / slots;
+                        if ((Mathf.Abs(turn) <= Mathf.PI * 0.5f) != (pass == 0)) continue;
+                        float angle = back + turn + (ring % 2) * Mathf.PI / slots;   // every other ring staggered
+                        Vector3 wanted = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+                        if (Walkable(anchor, wanted, out Vector3 spot) && Clear(spot, apart)) placed.Add(spot);
+                    }
+                }
+            }
+            while (placed.Count < count) placed.Add(anchor);
+        }
+
+        bool Clear(Vector3 spot, float apart)
+        {
+            for (int i = 0; i < placed.Count; i++)
+                if ((placed[i] - spot).sqrMagnitude < apart * apart) return false;
+            return true;
         }
     }
 }

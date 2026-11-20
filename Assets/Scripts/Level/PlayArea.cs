@@ -75,10 +75,16 @@ namespace HyperInfinite
         }
 
         /// <summary>True if <paramref name="point"/> is inside the walls, give or take the margin. Height doesn't count.</summary>
-        public bool Contains(Vector3 point)
+        public bool Contains(Vector3 point) => Contains(point, margin);
+
+        /// <summary>
+        /// True if <paramref name="point"/> is inside the walls, with <paramref name="slack"/> meters to spare past
+        /// them; a negative slack asks for that much room inside them instead. Height doesn't count.
+        /// </summary>
+        public bool Contains(Vector3 point, float slack)
         {
             Vector3 local = point - transform.position;
-            return Mathf.Abs(local.x) <= size.x * 0.5f + margin && Mathf.Abs(local.z) <= size.y * 0.5f + margin;
+            return Mathf.Abs(local.x) <= size.x * 0.5f + slack && Mathf.Abs(local.z) <= size.y * 0.5f + slack;
         }
 
         /// <summary>Four tall boxes just outside the playable space, overlapping at the corners so there's no gap.</summary>
