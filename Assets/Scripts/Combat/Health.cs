@@ -21,6 +21,12 @@ namespace HyperInfinite
         [Tooltip("Back on its feet after Revive.")]
         public UnityEvent onRevived = new UnityEvent();
 
+        /// <summary>
+        /// Raised when anything with Health dies, with the Health that died, so kills can be counted (for power-up
+        /// drops, say) without wiring up every enemy.
+        /// </summary>
+        public static event System.Action<Health> AnyDied;
+
         float current;
         float immuneUntil = -1f;
 
@@ -44,7 +50,11 @@ namespace HyperInfinite
             LastDamage = damage;
             LastDamageTime = Time.time;
             onDamaged.Invoke(damage.Amount);
-            if (current <= 0f) onDied.Invoke();
+            if (current <= 0f)
+            {
+                onDied.Invoke();
+                AnyDied?.Invoke(this);
+            }
         }
 
         public void Heal(float amount)
@@ -72,5 +82,11 @@ namespace HyperInfinite
 
         /// <summary>True while immune after a hit or a revive.</summary>
         public bool IsProtected => Time.time < immuneUntil;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            AnyDied = null;   // with domain reload off, nothing from the last Play stays subscribed
+        }
     }
 }

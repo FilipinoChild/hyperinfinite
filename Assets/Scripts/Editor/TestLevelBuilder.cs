@@ -17,7 +17,7 @@ namespace HyperInfinite
     public static class TestLevelBuilder
     {
         const string ScenePath = "Assets/Scenes/TestLevel.unity";
-        const string PrefabFolder = "Assets/Prefabs";              // in Player/, Hazards/ and Testing/ subfolders
+        const string PrefabFolder = "Assets/Prefabs";              // in Player/, Hazards/, PowerUps/ and Testing/ subfolders
         const string MaterialFolder = "Assets/Materials/Greybox";
         const string TextureFolder = "Assets/Textures/Greybox";
         const string MeshFolder = "Assets/Meshes/Greybox";
@@ -76,6 +76,11 @@ namespace HyperInfinite
             player.transform.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
 
             new GameObject("Debug HUD (temporary)").AddComponent<TempDebugHud>();
+
+            // HYPER cores drop from big heavy-bash kills here too. The prefab is an ordinary asset, not one this builds.
+            var drops = new GameObject("Power-Ups").AddComponent<PowerUpDrops>();
+            var corePrefab = AssetDatabase.LoadAssetAtPath<HyperCore>(PrefabFolder + "/PowerUps/Hyper Core.prefab");
+            if (corePrefab) Wire(drops, "hyperCore", corePrefab);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
