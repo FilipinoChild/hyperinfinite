@@ -8,7 +8,7 @@ namespace HyperInfinite
     /// Sends packs of Scuttlers in waves, each bigger than the one before. The next pack doesn't wait for the
     /// last to be wiped out: it comes once only a few are left, so the fight never goes quiet. It also waits
     /// while there's no room under a cap on how many can be alive at once. A big pack splits between two
-    /// spawn points.
+    /// spawn points. From a chosen pack on, Spitters come along and hang back behind the Scuttlers.
     public class ScuttlerSpawner : MonoBehaviour
     {
         [Header("What and where")]
@@ -34,13 +34,20 @@ namespace HyperInfinite
         [Tooltip("A pack bigger than this splits between two spawn points, so it comes at you from two sides. 0 never splits.")]
         [SerializeField, Min(0)] int splitAbove = 8;
 
+        [Header("Ranged support")]   // SPITTER
+        [Tooltip("The Spitter prefab. Leave empty for Scuttler-only packs.")]
+        [SerializeField] GameObject spitterPrefab;
+        [Tooltip("Spitters join packs from this pack number on (1 = the first pack).")]
+        [SerializeField, Min(1)] int spittersFromPack = 2;
+        [SerializeField, Min(0)] int spittersPerPack = 1;
+
         [Header("Events")]
         [Tooltip("Sent with the pack number, starting at 1.")]
         public UnityEvent<int> onPackSpawned = new UnityEvent<int>();
         [Tooltip("Every pack has been sent and killed. The boss fight can start here.")]
         public UnityEvent onAllPacksCleared = new UnityEvent();
 
-        readonly List<GameObject> alive = new List<GameObject>();   // every Scuttler this spawner sent that's still alive
+        readonly List<GameObject> alive = new List<GameObject>();   // every enemy this spawner sent that's still alive
         int packsSpawned;
         float timer;
         bool cleared, waiting;
@@ -50,7 +57,7 @@ namespace HyperInfinite
         public int Wave => packsSpawned;
         /// <summary>How many waves there are in all; 0 means they keep coming.</summary>
         public int TotalWaves => packsToSpawn;
-        /// <summary>Scuttlers this spawner sent that are still alive, from any wave.</summary>
+        /// <summary>Enemies this spawner sent that are still alive, from any wave.</summary>
         public int ScuttlersLeft
         {
             get
@@ -131,6 +138,20 @@ namespace HyperInfinite
                     position = hit.position;
 
                 alive.Add(Instantiate(scuttlerPrefab, position, point.rotation));
+            }
+
+            // SPITTER: from a chosen pack on, Spitters hang back behind the pack's first spawn point
+            if (spitterPrefab && packsSpawned + 1 >= spittersFromPack)
+            {
+                Transform spitterPoint = spawnPoints[first];
+                for (int i = 0; i < spittersPerPack; i++)
+                {
+                    Vector3 spot = spitterPoint.position - spitterPoint.forward * 3f
+                                 + spitterPoint.right * (i * 2f - (spittersPerPack - 1));
+                    if (NavMesh.SamplePosition(spot, out NavMeshHit spitterHit, 3f, NavMesh.AllAreas))
+                        spot = spitterHit.position;
+                    alive.Add(Instantiate(spitterPrefab, spot, spitterPoint.rotation));
+                }
             }
 
             packsSpawned++;

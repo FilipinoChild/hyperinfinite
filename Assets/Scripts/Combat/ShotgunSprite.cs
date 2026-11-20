@@ -158,7 +158,9 @@ namespace HyperInfinite
         {
             var texture = new Texture2D(sprite.width, sprite.height, TextureFormat.RGBA32, false)
             {
-                name = textureName, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp,
+                name = textureName,
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
             };
             texture.SetPixels32(pixels);
             texture.Apply(false, true);
