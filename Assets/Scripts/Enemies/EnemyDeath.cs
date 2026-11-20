@@ -33,6 +33,10 @@ namespace HyperInfinite
             Vector3 middle = transform.position + Vector3.up * 0.8f;
             PixelFx.Burst(middle, Palette.Red, Palette.Navy, pieces, 4f + pieces * 0.08f, 0.55f, 0.16f);
             PixelFx.Flash(middle, Palette.White, 0.9f);
+            // A squelching crunch, deeper the tougher it was; the Hive Mother gets a death cry of her own.
+            if (GetComponent<Boss>()) Sfx.At(Sound.HiveDeath, middle);
+            else if (GetComponent<SpitterGlob>()) Sfx.At(Sound.GlobPop, transform.position);   // an acid glob shot out of the air
+            else Sfx.At(Sound.ScuttlerDeath, middle, 1f, Mathf.Clamp(100f / health.Max, 0.7f, 1.3f));
             // Remove this enemy from the scene
             Destroy(gameObject);
         }

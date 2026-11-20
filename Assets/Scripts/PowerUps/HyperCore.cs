@@ -40,6 +40,7 @@ namespace HyperInfinite
         Light lamp;
         Vector3 ground;
         float born, owed, nextRing;
+        int hum;
 
         void Awake()
         {
@@ -69,6 +70,14 @@ namespace HyperInfinite
             PixelFx.Flash(ground + Vector3.up * hover, Palette.White, 1.2f, 0.08f);
             PixelFx.Ring(ground, 2.2f, Palette.Cyan, 24, 0.35f, 0.2f);
             PixelFx.Burst(ground + Vector3.up * hover, Palette.Cyan, Palette.PaleCyan, 16, 4f, 0.4f, 0.12f);
+            // A chime heard across the arena, then a hum that follows it, so it can be found by ear too.
+            Sfx.At(Sound.CoreDrop, ground + Vector3.up * hover);
+            hum = Sfx.Loop(Sound.CoreHum, transform);
+        }
+
+        void OnDestroy()
+        {
+            Sfx.Stop(hum);
         }
 
         /// <summary>Seconds left before it fades.</summary>
@@ -84,6 +93,7 @@ namespace HyperInfinite
             PixelFx.Ring(ground, 2.2f, Palette.Cyan, 24, 0.35f, 0.2f);
             PixelFx.Flash(transform.position, Palette.White, 1f, 0.08f);
             PixelFx.Burst(transform.position, Palette.Cyan, Palette.PaleCyan, 12, 3.5f, 0.35f, 0.1f);
+            Sfx.At(Sound.CoreDrop, transform.position);   // its chime again: another was earned
         }
 
         void Update()
@@ -152,6 +162,7 @@ namespace HyperInfinite
         void Fade()
         {
             PixelFx.Burst(transform.position, Palette.Cyan, Palette.Steel, 14, 3f, 0.4f, 0.1f);
+            Sfx.At(Sound.CoreFade, transform.position);
             onFaded.Invoke();
             Destroy(gameObject);
         }

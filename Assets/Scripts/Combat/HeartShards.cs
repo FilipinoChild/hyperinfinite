@@ -113,6 +113,7 @@ namespace HyperInfinite
             if (dropped == 0) return;
             PixelFx.Flash(point, Palette.PaleGreen, 0.35f, 0.06f);
             PixelFx.Burst(point, Palette.Green, Palette.PaleGreen, 10, 4f, 0.3f, 0.1f);
+            Sfx.At(Sound.HeartDrop, point);
             meshRenderer.enabled = true;
             enabled = true;
             onDropped.Invoke();
