@@ -17,6 +17,8 @@ namespace HyperInfinite
     {
         [Tooltip("The name over the boss bar. Capitals suit the pixel font.")]
         [SerializeField] string displayName = "HIVE MOTHER";
+        [Tooltip("Share of melee damage it takes: bashes, heavy bashes and brand bursts. Heavy bashes are built to clear crowds, not to melt bosses.")]
+        [SerializeField, Range(0f, 1f)] float meleeTaken = 0.35f;
 
         static readonly List<Boss> active = new List<Boss>();
 
@@ -24,6 +26,8 @@ namespace HyperInfinite
         public static Boss Current => active.Count > 0 ? active[0] : null;
 
         public string DisplayName => displayName;
+        /// <summary>Share of melee damage it takes.</summary>
+        public float MeleeTaken => meleeTaken;
         public Health Health { get; private set; }
 
         void Awake()

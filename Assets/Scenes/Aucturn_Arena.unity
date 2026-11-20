@@ -818,9 +818,13 @@ MonoBehaviour:
   slamCooldown: 3
   slamWarning: {fileID: 1409431403}
   scuttlerPrefab: {fileID: 9152386093921851600, guid: f578dccff1423ac488c1bf07630bcaa3, type: 3}
-  summonCount: 3
-  summonInterval: 12
+  summonCount: 4
+  summonInterval: 10
   summonRadius: 4
+  maxSummoned: 12
+  enrageBelow: 0.5
+  enragedExtraSummons: 2
+  enragedSlamCooldown: 0.6
 --- !u!114 &223185602
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -867,7 +871,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13107e0c76edffc478e2bf041b9a674f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.Health
-  maxHealth: 1500
+  maxHealth: 3000
   hitImmunity: 0
   onDamaged:
     m_PersistentCalls:
@@ -2129,15 +2133,18 @@ MonoBehaviour:
   - {fileID: 1294201972}
   - {fileID: 970585273}
   - {fileID: 871841768}
-  firstPackSize: 4
-  packGrowth: 2
-  maxPackSize: 8
-  packsToSpawn: 5
-  timeBetweenPacks: 2
+  firstPackSize: 6
+  packGrowth: 3
+  maxPackSize: 20
+  packsToSpawn: 6
+  timeBetweenPacks: 3
+  nextPackWhenLeft: 3
+  maxAlive: 22
   clusterRadius: 1.5
   spitterPrefab: {fileID: 6307805165435614210, guid: 8247cbe0f015d9f4e980b9209c9f6477, type: 3}
   spittersFromPack: 2
   spittersPerPack: 3
+  splitAbove: 8
   onPackSpawned:
     m_PersistentCalls:
       m_Calls: []
@@ -8846,6 +8853,40 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.Boss
   displayName: HIVE MOTHER
 --- !u!114 &3300000002
+  meleeTaken: 0.35
+--- !u!1 &3400000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3400000002}
+  - component: {fileID: 3400000003}
+  m_Layer: 0
+  m_Name: Power-Ups
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3400000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3400000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3400000003
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8918,6 +8959,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 47f981e64cabc3349980cb6e6f7f834d, type: 3}
+  m_GameObject: {fileID: 3400000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9376885f51d419e8ace8fe104940638, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.PowerUpDrops
+  hyperCore: {fileID: 6178019646448338464, guid: 1b15c2db733fe2a8474c70e06faa5248, type: 3}
+  multiKill: 5
+  guaranteedAfter: 8
+  onCoreDropped:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -8960,3 +9013,4 @@ SceneRoots:
   - {fileID: 285902489}
   - {fileID: 1342117618}
   - {fileID: 1931103942}
+  - {fileID: 3400000002}

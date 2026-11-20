@@ -17,7 +17,7 @@ namespace HyperInfinite
     public static class TestLevelBuilder
     {
         const string ScenePath = "Assets/Scenes/TestLevel.unity";
-        const string PrefabFolder = "Assets/Prefabs";              // in Player/, Hazards/ and Testing/ subfolders
+        const string PrefabFolder = "Assets/Prefabs";              // in Player/, Hazards/, PowerUps/ and Testing/ subfolders
         const string MaterialFolder = "Assets/Materials/Greybox";
         const string TextureFolder = "Assets/Textures/Greybox";
         const string MeshFolder = "Assets/Meshes/Greybox";
@@ -76,6 +76,11 @@ namespace HyperInfinite
             player.transform.SetPositionAndRotation(SpawnPosition, Quaternion.identity);
 
             new GameObject("Debug HUD (temporary)").AddComponent<TempDebugHud>();
+
+            // HYPER cores drop from big heavy-bash kills here too. The prefab is an ordinary asset, not one this builds.
+            var drops = new GameObject("Power-Ups").AddComponent<PowerUpDrops>();
+            var corePrefab = AssetDatabase.LoadAssetAtPath<HyperCore>(PrefabFolder + "/PowerUps/Hyper Core.prefab");
+            if (corePrefab) Wire(drops, "hyperCore", corePrefab);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -163,6 +168,8 @@ namespace HyperInfinite
             Wire(controls, "actions", controlsAsset);
             root.AddComponent<PlayerMotor>();
             root.AddComponent<Health>();
+            root.AddComponent<HyperPower>();   // the HYPER power-up, switched on by a HYPER core
+            root.AddComponent<HeartShards>();   // branded kills drop hearts that fly back and heal
             root.AddComponent<PlayerRespawn>();   // getting back up where you fell, and falls out of the level
             root.AddComponent<PlayerHud>();   // HP and the dash cooldown, bottom left
             root.AddComponent<PauseMenu>();   // Esc: resume, main menu or quit
@@ -213,6 +220,7 @@ namespace HyperInfinite
             var sprite = gun.AddComponent<ShotgunSprite>();
             Wire(sprite, "sprite", gunSprite);
             Wire(sprite, "muzzle", muzzle);
+            gun.AddComponent<ShotgunMelee>();   // the bash and heavy bash, spending the gun's heat
             return shotgun;
         }
 

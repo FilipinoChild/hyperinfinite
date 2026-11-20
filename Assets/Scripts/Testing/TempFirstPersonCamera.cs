@@ -9,7 +9,7 @@ namespace HyperInfinite
     ///  - it sits on a child of the Player at eye height;
     ///  - it turns the Player root left and right (PlayerMotor moves the way the root faces);
     ///  - it tilts itself up and down;
-    ///  - it narrows the view while EnergyBlastShotgun.AimBlend rises and kicks up on its onRecoil event;
+    ///  - it narrows the view while EnergyBlastShotgun.AimBlend rises and kicks up on its onRecoil event, and ShotgunMelee's;
     ///  - it drops to the ground and tips over when the player goes down, and gets back up on respawn;
     ///  - it jolts sideways when the player is hit;
     ///  - it bobs gently with each step while running, in time with the gun.
@@ -43,6 +43,7 @@ namespace HyperInfinite
         Camera view;
         PlayerMotor motor;
         EnergyBlastShotgun shotgun;
+        ShotgunMelee melee;
         Health health;
         float down;    // 0 standing, 1 flat on the ground
         float jolt;    // degrees of sideways tilt from the last hit, settling back to 0
@@ -60,6 +61,7 @@ namespace HyperInfinite
             if (!body) body = controls ? controls.transform : transform.parent;
             motor = GetComponentInParent<PlayerMotor>();
             shotgun = GetComponentInChildren<EnergyBlastShotgun>();
+            melee = GetComponentInChildren<ShotgunMelee>();
             health = GetComponentInParent<Health>();
             view.fieldOfView = fieldOfView;
             float x = transform.localEulerAngles.x;
@@ -71,6 +73,7 @@ namespace HyperInfinite
         {
             if (motor) motor.onLand.AddListener(OnLand);
             if (shotgun) shotgun.onRecoil.AddListener(OnRecoil);
+            if (melee) melee.onRecoil.AddListener(OnRecoil);
             if (health) health.onDamaged.AddListener(OnDamaged);
         }
 
@@ -78,6 +81,7 @@ namespace HyperInfinite
         {
             if (motor) motor.onLand.RemoveListener(OnLand);
             if (shotgun) shotgun.onRecoil.RemoveListener(OnRecoil);
+            if (melee) melee.onRecoil.RemoveListener(OnRecoil);
             if (health) health.onDamaged.RemoveListener(OnDamaged);
         }
 

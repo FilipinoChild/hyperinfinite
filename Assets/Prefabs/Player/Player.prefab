@@ -101,6 +101,7 @@ GameObject:
   - component: {fileID: 1202943413075074614}
   - component: {fileID: 2003959463990636880}
   - component: {fileID: 3286730586164606648}
+  - component: {fileID: 2605666127767405786}
   m_Layer: 0
   m_Name: Energy Blast Shotgun
   m_TagString: Untagged
@@ -152,10 +153,7 @@ MonoBehaviour:
   holdToRefire: 1
   aimSpread: 2.6
   aimSpeed: 6
-  heatPerShot: 21
-  coolingRate: 22
-  coolingDelay: 0.25
-  overheatLockout: 2.6
+  heatPerShot: 14
   ventRate: 140
   recoilHip: 4.6
   recoilAim: 2.9
@@ -169,7 +167,7 @@ MonoBehaviour:
   onDryFire:
     m_PersistentCalls:
       m_Calls: []
-  onOverheat:
+  onRedline:
     m_PersistentCalls:
       m_Calls: []
   onVent:
@@ -349,6 +347,8 @@ GameObject:
   - component: {fileID: 6424291177758514348}
   - component: {fileID: 2563880385009337540}
   - component: {fileID: 3965906788310245636}
+  - component: {fileID: 4972406863639252820}
+  - component: {fileID: 7316024981457302845}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -657,3 +657,128 @@ MonoBehaviour:
   dashFieldOfView: 88
   fieldOfViewSpeed: 12
   landingDip: 0.08
+--- !u!114 &2605666127767405786
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 848560721979138696}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1088a987f17f4f33834c1451ba40ce09, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.ShotgunMelee
+  bashDamage: 10
+  bashRange: 2.4
+  bashAngle: 45
+  bashCooldown: 0.35
+  searHeat: 10
+  searDamage: 15
+  searPush: 4
+  counterDamage: 30
+  counterPush: 10
+  brandTime: 8
+  brandReach: 14
+  brandDamage: 20
+  brandHeatDamage: 0.6
+  brandRadius: 2.5
+  heavyDamage: 30
+  heavyHeatDamage: 2.2
+  heavyRange: {x: 3.5, y: 7}
+  heavyWidth: {x: 40, y: 65}
+  heavyEdgeDamage: 0.8
+  heavyPush: {x: 5, y: 14}
+  chargeSlow: 0.6
+  lungeSpeed: 22
+  lungeTime: 0.18
+  recoil: 4
+  protection: 0.4
+  heavyCooldown: 0.6
+  overloadDamage: 1.5
+  overloadReach: 1.5
+  overloadWidth: 10
+  overloadPush: 4
+  blastJumpPitch: 50
+  blastJumpHeight: {x: 1.6, y: 4.2}
+  blastJumpRadius: {x: 2.5, y: 4}
+  staggerHeat: 50
+  staggerTime: 1.6
+  onBash:
+    m_PersistentCalls:
+      m_Calls: []
+  onSear:
+    m_PersistentCalls:
+      m_Calls: []
+  onCounter:
+    m_PersistentCalls:
+      m_Calls: []
+  onHeavyBash:
+    m_PersistentCalls:
+      m_Calls: []
+  onBlastJump:
+    m_PersistentCalls:
+      m_Calls: []
+  onBrandBurst:
+    m_PersistentCalls:
+      m_Calls: []
+  onRecoil:
+    m_PersistentCalls:
+      m_Calls: []
+  onHeavyKills:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &4972406863639252820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2578396166189733540}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44084db99647441fa090d510ee39dba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.HyperPower
+  duration: 15
+  perKill: 1
+  maxDuration: 25
+  speedBoost: 1.3
+  reachBoost: 1.4
+  extraWidth: 15
+  lungeBoost: 1.75
+  ramRadius: 1.6
+  ramDamage: 15
+  ramPush: 9
+  onHyperStart:
+    m_PersistentCalls:
+      m_Calls: []
+  onHyperEnd:
+    m_PersistentCalls:
+      m_Calls: []
+  onExtended:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &7316024981457302845
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2578396166189733540}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6ecc81fcd9e4af58fb43215773440aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.HeartShards
+  perKill: 3
+  healEach: 2
+  popTime: 0.4
+  flySpeed: 20
+  size: 0.36
+  onDropped:
+    m_PersistentCalls:
+      m_Calls: []
+  onCollected:
+    m_PersistentCalls:
+      m_Calls: []

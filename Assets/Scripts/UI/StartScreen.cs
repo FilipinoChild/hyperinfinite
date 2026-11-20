@@ -34,7 +34,9 @@ namespace HyperInfinite
             { "LEFT SHIFT", "DASH", "A BURST OF SPEED. RECHARGES IN 1 S" },
             { "LEFT MOUSE", "FIRE", "HOLD TO KEEP FIRING. BUILDS HEAT" },
             { "RIGHT MOUSE", "AIM", "HOLD TO TIGHTEN THE SPREAD" },
-            { "R", "VENT HEAT", "COOLS THE GUN BEFORE IT OVERHEATS" },
+            { "R", "VENT HEAT", "DUMPS ALL HEAT. HEALS FROM A REDLINE" },
+            { "Q", "BASH", "SEARS AND BRANDS. BRANDED KILLS HEAL" },
+            { "HOLD Q", "HEAVY BASH", "DUMPS ALL HEAT. AIM DOWN TO LAUNCH" },
             { "ESC", "PAUSE", "" },
         };
 
@@ -131,7 +133,7 @@ namespace HyperInfinite
             int rows = Rows.GetLength(0);
             for (int i = 0; i < rows; i++)
             {
-                float y = 195f - i * 51f;
+                float y = 210f - i * 45f;   // ten rows, clear of the prompt below
                 Image keycap = UiKit.Box("Key " + Rows[i, 0], panel, middle, middle, new Vector2(-330f, y), new Vector2(240f, 39f), Palette.Track);
                 UiKit.Border(keycap.transform, Palette.Dim);
                 UiKit.Label("Key", keycap.transform, middle, middle, Vector2.zero, new Vector2(240f, 39f), Rows[i, 0], 24, TextAnchor.MiddleCenter, Palette.White);

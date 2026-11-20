@@ -8,14 +8,19 @@ namespace HyperInfinite
     ///
     /// Bottom left: the HP bar with its numbers, and the thruster dash's cooldown. The HP bar is green,
     /// then yellow, then red as health falls; a pale trail shows each hit for a moment before draining
-    /// away; it blinks when health is low, and the whole panel jolts when you're hit.
+    /// away; it blinks when health is low, and the whole panel jolts when you're hit. Healing glows it pale green
+    /// and pops a "+N" beside HP with how much came back.
     ///
     /// In the middle sits the crosshair. Its gap shows the shotgun's spread, so it tightens as you aim,
-    /// and red marks flash at its corners when a blast lands. Below it is the shotgun's heat gauge: amber
-    /// as heat builds, flashing just before the next blast would overheat the gun, and red while it's
-    /// locked. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
+    /// and red marks flash at its corners when a blast or a bash lands. Below it is the shotgun's heat gauge:
+    /// amber as heat builds, flashing when the next blast would redline the gun, and red once it has. While a
+    /// heavy bash charges, the gauge strobes (it's how hard the bash will hit) and RELEASE TO BASH shows, or
+    /// RELEASE TO OVERLOAD from a redlined gun. Under that, while the dash recharges, is a small copy of the bottom-left dash bar: it
     /// fills up, flashes when the dash is ready and then gets out of the way, so you can tell without
-    /// looking down. VENT NOW, VENTING or OVERHEATED shows below both, only when there's something to do.
+    /// looking down. LAST SHOT, VENTING or REDLINE! VENT OR OVERLOAD shows below both, only when there's something to do.
+    /// A green line along the bottom of the gauge shows how much of the heat came from hits, the part that heals
+    /// when vented. While redlined, a heart beside the gauge shows what venting would heal; while a vent heals,
+    /// HEALING shows, or HEAL CUT if a hit stops it.
     /// Above the crosshair, WEBBED! SHOOT THE WEB blinks while a Web Trap has hold of you.
     ///
     /// Top left is the wave counter, for scenes with a ScuttlerSpawner: GET READY before the first wave,
@@ -23,6 +28,9 @@ namespace HyperInfinite
     /// the end. The number pops when a new wave arrives.
     ///
     /// Top middle, while a Boss is in the fight, is the boss bar with its name and health (BossBar).
+    ///
+    /// While HYPER is on, a HYPER panel sits above the HP panel with the time left, and the screen's edges glow
+    /// cyan (HyperHud).
     ///
     /// Getting hurt and going down are drawn by two helpers this makes: HurtOverlay (the red border and
     /// the arrows that point at whatever hit you) and DeathScreen (the Respawn button). PlayerRespawn
@@ -50,6 +58,7 @@ namespace HyperInfinite
         PlayerRespawn respawn;
         PlayerMotor motor;
         EnergyBlastShotgun shotgun;
+        ShotgunMelee melee;
         Camera view;
         Canvas canvas;
         HurtOverlay hurt;
@@ -60,18 +69,19 @@ namespace HyperInfinite
         RectTransform meters;
         Vector2 metersHome;
         Image healthFill, healthTrail, dashFill;
-        Text healthValue, dashValue;
-        float trail = 1f, jolt;
-        int shownHealth = -1, shownMaxHealth = -1, shownDash = -2;
+        Text healthValue, dashValue, healPop;
+        float trail = 1f, jolt, lastHealTime = -10f, healPopUntil = -10f, healPopAmount;
+        int shownHealth = -1, shownMaxHealth = -1, shownDash = -2, shownHealPop = -1;
 
         // The crosshair, with the heat gauge and the dash cooldown under it.
         GameObject crosshair, hitMarker, heatGauge, dashGauge;
         readonly RectTransform[] ticks = new RectTransform[4];
-        Image heatFill, crosshairDashFill;
-        Text heatLabel, snarePrompt;
+        Image heatFill, hitHeatFill, crosshairDashFill, healHeart;
+        Text heatLabel, snarePrompt, healReadyValue;
+        GameObject healReady;
         float shownGap = -1f, dashReadyAt = -10f;
         bool dashWasReady = true;
-        int shownHeatLabel = -1;
+        int shownHeatLabel = -1, shownHealReady = -1;
 
         // Top left.
         ScuttlerSpawner waves;
@@ -82,6 +92,7 @@ namespace HyperInfinite
 
         // Top middle.
         BossBar bossBar;
+        HyperHud hyperHud;
 
         void Awake()
         {
@@ -90,6 +101,7 @@ namespace HyperInfinite
             if (!respawn && health) respawn = gameObject.AddComponent<PlayerRespawn>();   // an older Player prefab without one
             motor = GetComponent<PlayerMotor>();
             shotgun = GetComponentInChildren<EnergyBlastShotgun>();
+            melee = GetComponentInChildren<ShotgunMelee>();
             view = GetComponentInChildren<Camera>();
             Build();
         }
@@ -102,13 +114,21 @@ namespace HyperInfinite
         void OnEnable()
         {
             if (canvas) canvas.enabled = true;
-            if (health) health.onDamaged.AddListener(OnDamaged);
+            if (health)
+            {
+                health.onDamaged.AddListener(OnDamaged);
+                health.onHealed.AddListener(OnHealed);
+            }
         }
 
         void OnDisable()
         {
             if (canvas) canvas.enabled = false;
-            if (health) health.onDamaged.RemoveListener(OnDamaged);
+            if (health)
+            {
+                health.onDamaged.RemoveListener(OnDamaged);
+                health.onHealed.RemoveListener(OnHealed);
+            }
         }
 
         void OnDestroy()
@@ -128,6 +148,15 @@ namespace HyperInfinite
             if (hurt != null) hurt.Hit(amount);
         }
 
+        /// <summary>Heals that come close together add up in one "+N".</summary>
+        void OnHealed(float amount)
+        {
+            if (Time.time >= healPopUntil) healPopAmount = 0f;
+            healPopAmount += amount;
+            healPopUntil = Time.time + 0.8f;
+            lastHealTime = Time.time;
+        }
+
         // ---- Building it -----------------------------------------------------------------------
 
         void Build()
@@ -138,6 +167,8 @@ namespace HyperInfinite
             BuildMeters(root);
             BuildWaveCounter(root);
             bossBar = new BossBar(root);
+            var hyper = GetComponent<HyperPower>();
+            if (hyper) hyperHud = new HyperHud(root, hyper);
             BuildCrosshair(root);
             BuildHeatGauge(root);
             if (respawn) deathScreen = new DeathScreen(root, respawn, Respawn);   // last, so it covers everything else
@@ -150,6 +181,7 @@ namespace HyperInfinite
             metersHome = meters.anchoredPosition;
 
             UiKit.Label("HP Label", meters, TopLeft, TopLeft, new Vector2(18f, -9f), new Vector2(120f, 30f), "HP", 24, TextAnchor.MiddleLeft, Palette.White);
+            healPop = UiKit.Label("Heal", meters, TopLeft, TopLeft, new Vector2(72f, -12f), new Vector2(150f, 24f), "", 16, TextAnchor.MiddleLeft, Palette.PaleGreen);
             healthValue = UiKit.Label("HP Value", meters, TopRight, TopRight, new Vector2(-18f, -9f), new Vector2(240f, 30f), "", 24,
                                       TextAnchor.MiddleRight, Palette.White);
             RectTransform healthTrack = UiKit.Track("HP Bar", meters, TopLeft, TopLeft, new Vector2(18f, -48f), new Vector2(HealthBarWidth, 18f));
@@ -220,12 +252,26 @@ namespace HyperInfinite
             RectTransform track = UiKit.Track("Heat Gauge", parent, Middle, new Vector2(0.5f, 1f), new Vector2(0f, -93f), new Vector2(HeatBarWidth, 12f));
             heatGauge = track.gameObject;
             heatFill = UiKit.Fill("Heat", track, Palette.Amber);
+            // A green line along the bottom: the share of the heat that came from hits, the part that heals.
+            RectTransform strip = UiKit.Area("Hit Heat", track, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 3f), new Vector2(HeatBarWidth, 3f));
+            hitHeatFill = UiKit.Fill("Hit Heat", strip, Palette.Green);
+            UiKit.SetFill(hitHeatFill, 0f, HeatBarWidth);
             for (int i = 1; i < 5; i++)   // marks at every fifth, about one blast's worth of heat each
                 UiKit.Box("Mark", track, new Vector2(0.2f * i, 0.5f), Middle, Vector2.zero, new Vector2(3f, 12f), Palette.Ink);
             UiKit.Border(track, Palette.Ink);
             // The warning sits below the dash cooldown's slot, so the two never overlap.
             heatLabel = UiKit.Label("Heat Warning", track, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0f, -21f), new Vector2(300f, 24f), "", 16,
                                     TextAnchor.MiddleCenter, Palette.White);
+
+            // Beside the gauge: a heart with what venting would heal, while redlined, and what's still to come while it heals.
+            RectTransform ready = UiKit.Area("Heal Ready", track, new Vector2(1f, 0.5f), new Vector2(0f, 0.5f), new Vector2(12f, 0f), new Vector2(120f, 24f));
+            healReady = ready.gameObject;
+            var heartSize = new Vector2(7f, 6f) * UiKit.Pixel;
+            healHeart = UiKit.Picture("Heart", ready, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, heartSize, PixelArt.Heart, Palette.Green);
+            UiKit.Picture("Shine", ready, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, heartSize, PixelArt.HeartShine, Palette.PaleGreen);
+            healReadyValue = UiKit.Label("Amount", ready, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(27f, 0f), new Vector2(93f, 24f), "", 16,
+                                         TextAnchor.MiddleLeft, Palette.Green);
+            healReady.SetActive(false);
             heatGauge.SetActive(shotgun);
         }
 
@@ -255,6 +301,7 @@ namespace HyperInfinite
             }
             UpdateWaveCounter(dt);
             bossBar.Tick(dt);
+            hyperHud?.Tick(dt);
             UpdateMeters(dt);
         }
 
@@ -267,7 +314,15 @@ namespace HyperInfinite
                 bool low = f > 0f && f <= lowHealth;
                 Color color = f > 0.6f ? Palette.Green : f > lowHealth ? Palette.Yellow : Palette.Red;
                 if (low && Mathf.Repeat(Time.unscaledTime * 4f, 1f) < 0.5f) color = Palette.White;   // blinking
+                if (Time.time - lastHealTime < 0.12f) color = Palette.PaleGreen;   // glows while health comes back
                 healthFill.color = color;
+
+                int pop = Time.time < healPopUntil ? Mathf.CeilToInt(healPopAmount) : 0;
+                if (pop != shownHealPop)
+                {
+                    shownHealPop = pop;
+                    healPop.text = pop > 0 ? "+" + pop : "";
+                }
 
                 // The trail holds where health was for a moment after a hit, then drains down to it.
                 if (f >= trail) trail = f;
@@ -320,7 +375,8 @@ namespace HyperInfinite
                 ticks[2].anchoredPosition = new Vector2(-reach, 0f);
                 ticks[3].anchoredPosition = new Vector2(reach, 0f);
             }
-            bool hit = shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f;
+            bool hit = (shotgun && shotgun.LastShot.BoltsOnTarget > 0 && Time.time - shotgun.LastShot.Time < 0.18f)
+                       || (melee && Time.time - melee.LastHitTime < 0.18f);
             if (hitMarker.activeSelf != hit) hitMarker.SetActive(hit);
             UpdateCrosshairDash();
 
@@ -359,16 +415,42 @@ namespace HyperInfinite
         {
             if (!shotgun) return;
             float heat = Mathf.Clamp01(shotgun.Heat01);
-            bool flashing = shotgun.AboutToOverheat && Mathf.Repeat(Time.unscaledTime * 6f, 1f) < 0.5f;
+            bool flashing = shotgun.AboutToRedline && Mathf.Repeat(Time.unscaledTime * 6f, 1f) < 0.5f;
+            bool redlined = shotgun.IsRedlined;
+            bool charging = melee && melee.IsCharging;
+            bool strobe = Mathf.Repeat(Time.unscaledTime * 8f, 1f) < 0.5f;
             UiKit.SetFill(heatFill, heat, HeatBarWidth);
-            heatFill.color = shotgun.IsOverheated ? Palette.Red : flashing ? Palette.White : heat > 0.5f ? Palette.Amber : Palette.Yellow;
-            int label = shotgun.IsOverheated ? 3 : shotgun.IsVenting ? 2 : shotgun.AboutToOverheat ? 1 : 0;   // nothing while all is well
+            UiKit.SetFill(hitHeatFill, shotgun.HitHeat01, HeatBarWidth);
+            heatFill.color = charging ? (strobe ? Palette.White : Palette.Amber)
+                           : redlined ? Palette.Red : flashing ? Palette.White : heat > 0.5f ? Palette.Amber : Palette.Yellow;
+            bool healing = shotgun.IsVentHealing, cut = Time.time - shotgun.LastHealCutTime < 1f;
+            bool blink = Mathf.Repeat(Time.unscaledTime * 3f, 1f) < 0.5f;
+            int label = charging ? (redlined ? 5 : 4)
+                      : shotgun.IsVenting ? (healing ? 6 : cut ? 7 : 2)
+                      : redlined ? 3 : shotgun.AboutToRedline ? 1 : 0;   // nothing while all is well
             if (label != shownHeatLabel)
             {
                 shownHeatLabel = label;
-                heatLabel.text = label == 3 ? "OVERHEATED" : label == 2 ? "VENTING" : label == 1 ? "VENT NOW" : "";
+                heatLabel.text = label == 7 ? "HEAL CUT" : label == 6 ? "HEALING" : label == 5 ? "RELEASE TO OVERLOAD" : label == 4 ? "RELEASE TO BASH"
+                               : label == 3 ? "REDLINE! VENT OR OVERLOAD" : label == 2 ? "VENTING" : label == 1 ? "LAST SHOT" : "";
             }
-            heatLabel.color = shotgun.IsOverheated || flashing ? Palette.Red : Palette.White;
+            heatLabel.color = charging ? (strobe ? Palette.White : redlined ? Palette.Red : Palette.Amber)
+                            : label == 6 ? Palette.Green
+                            : label == 7 ? (blink ? Palette.Red : Palette.White)
+                            : redlined && !shotgun.IsVenting ? (blink ? Palette.Red : Palette.White)
+                            : flashing ? Palette.Red : Palette.White;
+
+            // The heart: what venting now would heal, or what the heal under way still has to give.
+            float amount = charging ? 0f : healing ? shotgun.VentHealLeft : shotgun.VentHealReady;
+            int value = amount >= 0.5f ? Mathf.CeilToInt(amount) : 0;
+            if (healReady.activeSelf != value > 0) healReady.SetActive(value > 0);
+            if (value <= 0) return;
+            if (value != shownHealReady)
+            {
+                shownHealReady = value;
+                healReadyValue.text = "+" + value;
+            }
+            healHeart.color = healing || blink ? Palette.Green : Palette.White;
         }
 
         void UpdateWaveCounter(float dt)

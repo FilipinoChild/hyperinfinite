@@ -20,6 +20,14 @@ namespace HyperInfinite
         public UnityEvent onDied = new UnityEvent();
         [Tooltip("Back on its feet after Revive.")]
         public UnityEvent onRevived = new UnityEvent();
+        [Tooltip("Sent with the health actually given back, so nothing is sent at full health.")]
+        public UnityEvent<float> onHealed = new UnityEvent<float>();
+
+        /// <summary>
+        /// Raised when anything with Health dies, with the Health that died, so kills can be counted (for power-up
+        /// drops, say) without wiring up every enemy.
+        /// </summary>
+        public static event System.Action<Health> AnyDied;
 
         float current;
         float immuneUntil = -1f;
@@ -44,13 +52,19 @@ namespace HyperInfinite
             LastDamage = damage;
             LastDamageTime = Time.time;
             onDamaged.Invoke(damage.Amount);
-            if (current <= 0f) onDied.Invoke();
+            if (current <= 0f)
+            {
+                onDied.Invoke();
+                AnyDied?.Invoke(this);
+            }
         }
 
         public void Heal(float amount)
         {
             if (IsDead || amount <= 0f) return;
+            float before = current;
             current = Mathf.Min(maxHealth, current + amount);
+            if (current > before) onHealed.Invoke(current - before);
         }
 
         /// <summary>
@@ -64,7 +78,19 @@ namespace HyperInfinite
             onRevived.Invoke();
         }
 
+        /// <summary>Immune for the next <paramref name="seconds"/>, or longer if it already was: a moment of cover while committing to an attack.</summary>
+        public void Protect(float seconds)
+        {
+            immuneUntil = Mathf.Max(immuneUntil, Time.time + seconds);
+        }
+
         /// <summary>True while immune after a hit or a revive.</summary>
         public bool IsProtected => Time.time < immuneUntil;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            AnyDied = null;   // with domain reload off, nothing from the last Play stays subscribed
+        }
     }
 }

@@ -10,7 +10,9 @@ namespace HyperInfinite
     /// in the Inspector.
     ///
     /// Sticky ground, such as a Web Trap, slows all of it down through Snare: while snared the player
-    /// runs and dashes at a fraction of their speed and can't jump.
+    /// runs and dashes at a fraction of their speed and can't jump. Slow is the same without the
+    /// jumping ban, for heavy things like charging a heavy bash. Launch throws the player upward, and Lunge
+    /// throws them forward the way a dash does, without spending the dash.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
     [DefaultExecutionOrder(-20)]   // after input and the camera's turn, before shooting
@@ -63,8 +65,9 @@ namespace HyperInfinite
 
         CharacterController body;
         Vector3 velocity, dashDirection;
+        float burstSpeed;   // the speed of the dash or lunge under way
         float coyoteTimer, jumpBufferTimer, dashTimer, dashCooldownTimer, airTime;
-        float snareScale = 1f, snaredUntil = -1f;
+        float snareScale = 1f, snaredUntil = -1f, slowScale = 1f, slowedUntil = -1f;
         int airJumpsUsed;
 
         public Vector3 Velocity => velocity;
@@ -78,6 +81,10 @@ namespace HyperInfinite
         public float DashCooldownLeft => Mathf.Max(0f, dashCooldownTimer);
         public int AirJumpsLeft => Mathf.Max(0, airJumps - airJumpsUsed);
         public float RunSpeed => runSpeed;
+        /// <summary>Running and dashing speed is multiplied by this: above 1 while a power-up boosts the suit.</summary>
+        public float SpeedScale { get; set; } = 1f;
+        /// <summary>Downward pull in meters per second per second, for working out launch speeds.</summary>
+        public float Gravity => gravity;
         /// <summary>True while something sticky has hold of the player: slowed, and unable to jump.</summary>
         public bool IsSnared => Time.time < snaredUntil;
 
@@ -102,6 +109,8 @@ namespace HyperInfinite
             // Snared: everything across the ground happens at a fraction of its speed, and there's no jumping.
             bool snared = IsSnared;
             float pace = snared ? snareScale : 1f;
+            if (Time.time < slowedUntil) pace = Mathf.Min(pace, slowScale);
+            pace *= SpeedScale;
             if (snared) jumpBufferTimer = 0f;
 
             if (controls && controls.DashPressed && dashCooldownTimer <= 0f) StartDash(wish);
@@ -111,8 +120,8 @@ namespace HyperInfinite
             if (dashTimer > 0f)
             {
                 dashTimer -= dt;
-                velocity.x = dashDirection.x * dashSpeed * pace;
-                velocity.z = dashDirection.z * dashSpeed * pace;
+                velocity.x = dashDirection.x * burstSpeed * pace;
+                velocity.z = dashDirection.z * burstSpeed * pace;
                 if (dashTimer <= 0f)
                 {
                     velocity.x *= dashCarry;
@@ -161,7 +170,7 @@ namespace HyperInfinite
             body.enabled = true;
             velocity = Vector3.zero;
             dashTimer = dashCooldownTimer = coyoteTimer = jumpBufferTimer = airTime = 0f;
-            snaredUntil = -1f;
+            snaredUntil = slowedUntil = -1f;
             airJumpsUsed = 0;
             IsGrounded = false;
         }
@@ -177,6 +186,54 @@ namespace HyperInfinite
             speedScale = Mathf.Clamp01(speedScale);
             snareScale = IsSnared ? Mathf.Min(snareScale, speedScale) : speedScale;
             snaredUntil = Mathf.Max(snaredUntil, Time.time + holdFor);
+        }
+
+        /// <summary>
+        /// Called every frame something weighs the player down: they run and dash at
+        /// <paramref name="speedScale"/> of their speed, but can still jump. Wears off a moment after the calls stop.
+        /// </summary>
+        public void Slow(float speedScale, float holdFor = 0.1f)
+        {
+            speedScale = Mathf.Clamp01(speedScale);
+            slowScale = Time.time < slowedUntil ? Mathf.Min(slowScale, speedScale) : speedScale;
+            slowedUntil = Mathf.Max(slowedUntil, Time.time + holdFor);
+        }
+
+        /// <summary>Whatever was slowing the player (Slow) stops at once.</summary>
+        public void EndSlow()
+        {
+            slowedUntil = -1f;
+        }
+
+        /// <summary>
+        /// Throws the player upward at <paramref name="upwardSpeed"/> meters per second, whatever they were doing
+        /// before, so it works just as well mid-fall. Their double jump is kept.
+        /// </summary>
+        public void Launch(float upwardSpeed)
+        {
+            velocity.y = Mathf.Max(velocity.y, upwardSpeed);
+            IsGrounded = false;
+            coyoteTimer = jumpBufferTimer = 0f;
+        }
+
+        /// <summary>
+        /// Throws the player along <paramref name="direction"/> at <paramref name="speed"/> meters per second for
+        /// <paramref name="seconds"/>, moving the way a dash does (and ending with the same carry), but without
+        /// starting the dash's cooldown. A heavy bash's lunge uses it.
+        /// </summary>
+        public void Lunge(Vector3 direction, float speed, float seconds)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 1e-4f || seconds <= 0f) return;
+            dashDirection = direction.normalized;
+            burstSpeed = speed;
+            dashTimer = seconds;
+        }
+
+        /// <summary>The dash is ready again at once.</summary>
+        public void RefundDash()
+        {
+            dashCooldownTimer = 0f;
         }
 
         /// <summary>Knock-back from blasts, in meters per second. An upward push lifts you off the ground.</summary>
@@ -214,6 +271,7 @@ namespace HyperInfinite
         void StartDash(Vector3 wish)
         {
             dashDirection = wish.sqrMagnitude > 0.01f ? wish.normalized : Flat(transform.forward);
+            burstSpeed = dashSpeed;
             dashTimer = dashDuration;
             dashCooldownTimer = dashCooldown;
             onDash.Invoke();
