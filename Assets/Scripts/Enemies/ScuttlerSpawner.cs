@@ -26,6 +26,13 @@ namespace HyperInfinite
         [Tooltip("How spread out a pack is when it appears, in meters.")]
         [SerializeField, Min(0f)] float clusterRadius = 1.5f;
 
+        [Header("Ranged support")]
+        [Tooltip("The Spitter prefab. Leave empty for Scuttler-only packs.")]
+        [SerializeField] GameObject spitterPrefab;
+        [Tooltip("Spitters join packs from this pack number on (1 = the first pack).")]
+        [SerializeField, Min(1)] int spittersFromPack = 2;
+        [SerializeField, Min(0)] int spittersPerPack = 1;
+
         [Header("Events")]
         [Tooltip("Sent with the pack number, starting at 1.")]
         public UnityEvent<int> onPackSpawned = new UnityEvent<int>();
@@ -103,6 +110,18 @@ namespace HyperInfinite
                     position = hit.position;
 
                 alive.Add(Instantiate(scuttlerPrefab, position, point.rotation));
+            }
+
+            // Ranged support: from a certain pack on, Spitters hang back behind the Scuttlers
+            if (spitterPrefab && packsSpawned + 1 >= spittersFromPack)
+            {
+                for (int i = 0; i < spittersPerPack; i++)
+                {
+                    Vector3 spot = point.position - point.forward * 3f + point.right * (i * 2f - (spittersPerPack - 1));
+                    if (NavMesh.SamplePosition(spot, out NavMeshHit spitterHit, 3f, NavMesh.AllAreas))
+                        spot = spitterHit.position;
+                    alive.Add(Instantiate(spitterPrefab, spot, point.rotation));
+                }
             }
 
             packsSpawned++;
