@@ -48,6 +48,7 @@ namespace HyperInfinite
         public UnityEvent onAllPacksCleared = new UnityEvent();
 
         readonly List<GameObject> alive = new List<GameObject>();   // every enemy this spawner sent that's still alive
+        readonly List<GameObject> lastPack = new List<GameObject>(24);   // the pack just sent, Spitters included
         int packsSpawned;
         float timer;
         bool cleared, waiting;
@@ -71,6 +72,8 @@ namespace HyperInfinite
         public float NextWaveIn => waiting && !cleared ? Mathf.Max(0f, timer) : 0f;
         /// <summary>Every wave has been sent and killed.</summary>
         public bool AllCleared => cleared;
+        /// <summary>The enemies of the pack just sent, Spitters included, for whatever listens to onPackSpawned (PowerUpDrops' safety net).</summary>
+        public IReadOnlyList<GameObject> LastPack => lastPack;
 
         void Update()
         {
@@ -124,6 +127,7 @@ namespace HyperInfinite
 
             int count = spawnPoints.Length;
             int first = Random.Range(0, count);
+            lastPack.Clear();
             int size = PackSize(packsSpawned);
             // A big pack splits: every other Scuttler comes from a second, different spawn point.
             int second = splitAbove > 0 && size > splitAbove && count > 1 ? (first + Random.Range(1, count)) % count : first;
@@ -137,7 +141,9 @@ namespace HyperInfinite
                 if (NavMesh.SamplePosition(position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
                     position = hit.position;
 
-                alive.Add(Instantiate(scuttlerPrefab, position, point.rotation));
+                GameObject scuttler = Instantiate(scuttlerPrefab, position, point.rotation);
+                alive.Add(scuttler);
+                lastPack.Add(scuttler);
             }
 
             // SPITTER: from a chosen pack on, Spitters hang back behind the pack's first spawn point
@@ -150,7 +156,9 @@ namespace HyperInfinite
                                  + spitterPoint.right * (i * 2f - (spittersPerPack - 1));
                     if (NavMesh.SamplePosition(spot, out NavMeshHit spitterHit, 3f, NavMesh.AllAreas))
                         spot = spitterHit.position;
-                    alive.Add(Instantiate(spitterPrefab, spot, spitterPoint.rotation));
+                    GameObject spitter = Instantiate(spitterPrefab, spot, spitterPoint.rotation);
+                    alive.Add(spitter);
+                    lastPack.Add(spitter);   // a Spitter is part of its wave, for the HYPER safety net too
                 }
             }
 
