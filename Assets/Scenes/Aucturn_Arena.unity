@@ -882,6 +882,9 @@ MonoBehaviour:
   onRevived:
     m_PersistentCalls:
       m_Calls: []
+  onHealed:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &259859783
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2141,10 +2144,12 @@ MonoBehaviour:
   nextPackWhenLeft: 3
   maxAlive: 22
   clusterRadius: 1.5
+  splitAbove: 8
   spitterPrefab: {fileID: 6307805165435614210, guid: 8247cbe0f015d9f4e980b9209c9f6477, type: 3}
   spittersFromPack: 2
-  spittersPerPack: 3
-  splitAbove: 8
+  spittersPerPack: 4
+  spitterGrowth: 4
+  maxSpittersPerPack: 20
   onPackSpawned:
     m_PersistentCalls:
       m_Calls: []
@@ -3868,6 +3873,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.TempDebugHud
   togglePanel: 94
+  giveHyper: 95
 --- !u!4 &1938945986
 Transform:
   m_ObjectHideFlags: 0
