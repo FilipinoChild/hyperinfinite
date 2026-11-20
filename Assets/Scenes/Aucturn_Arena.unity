@@ -882,6 +882,9 @@ MonoBehaviour:
   onRevived:
     m_PersistentCalls:
       m_Calls: []
+  onHealed:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &259859783
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2141,10 +2144,12 @@ MonoBehaviour:
   nextPackWhenLeft: 3
   maxAlive: 22
   clusterRadius: 1.5
+  splitAbove: 8
   spitterPrefab: {fileID: 6307805165435614210, guid: 8247cbe0f015d9f4e980b9209c9f6477, type: 3}
   spittersFromPack: 2
-  spittersPerPack: 3
-  splitAbove: 8
+  spittersPerPack: 5
+  spitterGrowth: 5
+  maxSpittersPerPack: 20
   onPackSpawned:
     m_PersistentCalls:
       m_Calls: []
@@ -3868,6 +3873,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.TempDebugHud
   togglePanel: 94
+  giveHyper: 95
 --- !u!4 &1938945986
 Transform:
   m_ObjectHideFlags: 0
@@ -8920,6 +8926,24 @@ MonoBehaviour:
   onCoreDropped:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3500000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2037038414}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7540bb75782561f44c85cb786f5482d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.PlayArea
+  size: {x: 63.7, y: 63.7}
+  wallHeight: 60
+  wallThickness: 2
+  margin: 1
+  perchHeight: 3.3
+  perchGrace: 0.6
 --- !u!1001 &6186000952436285037
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8977,24 +9001,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 47f981e64cabc3349980cb6e6f7f834d, type: 3}
---- !u!114 &3500000001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2037038414}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7540bb75782561f44c85cb786f5482d2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.PlayArea
-  size: {x: 63.7, y: 63.7}
-  wallHeight: 60
-  wallThickness: 2
-  margin: 1
-  perchHeight: 3.3
-  perchGrace: 0.6
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
