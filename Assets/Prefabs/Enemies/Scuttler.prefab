@@ -298,7 +298,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13107e0c76edffc478e2bf041b9a674f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HyperInfinite.Health
-  maxHealth: 60
+  maxHealth: 100
   hitImmunity: 0
   onDamaged:
     m_PersistentCalls:

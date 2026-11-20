@@ -15,7 +15,7 @@ namespace HyperInfinite
     /// </summary>
     public class PixelFx : MonoBehaviour
     {
-        const int Capacity = 512;
+        const int Capacity = 1024;   // enough for a heavy bash through a crowd, with everything else still going
         const byte KindChunk = 0, KindFlat = 1, KindBolt = 2;
 
         struct Particle
@@ -77,6 +77,24 @@ namespace HyperInfinite
             }
         }
 
+        /// <summary>
+        /// Chunks blown out in a cone along <paramref name="direction"/>, up to <paramref name="halfAngle"/> degrees
+        /// off it, in two mixed colors: a directed blast, such as a heavy bash.
+        /// </summary>
+        public static void Cone(Vector3 point, Vector3 direction, float halfAngle, Color color, Color accent, int count,
+                                float speed = 12f, float life = 0.3f, float size = 0.14f)
+        {
+            PixelFx fx = Get();
+            if (!fx) return;
+            direction.Normalize();
+            float spread = Mathf.Tan(Mathf.Clamp(halfAngle, 0f, 80f) * Mathf.Deg2Rad);
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 velocity = (direction + Random.insideUnitSphere * spread).normalized * (speed * Random.Range(0.45f, 1f));
+                fx.Spawn(KindChunk, point, velocity, i % 3 == 2 ? accent : color, size * Random.Range(0.6f, 1f), life * Random.Range(0.6f, 1f), 4f);
+            }
+        }
+
         /// <summary>A ring of squares spreading across the ground from <paramref name="center"/> out to <paramref name="radius"/>: a shockwave.</summary>
         public static void Ring(Vector3 center, float radius, Color color, int count = 28, float life = 0.35f, float size = 0.22f)
         {
@@ -89,6 +107,25 @@ namespace HyperInfinite
                 float angle = (i + offset) / count * Mathf.PI * 2f;
                 var direction = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
                 fx.Spawn(KindFlat, center + direction * 0.4f, direction * ((radius - 0.4f) / life), color, size, life, 0f);
+            }
+        }
+
+        /// <summary>
+        /// Flat squares spreading across the ground from <paramref name="center"/> along <paramref name="direction"/>,
+        /// within <paramref name="halfAngle"/> degrees either side of it, out to <paramref name="radius"/>: a shockwave thrown forward.
+        /// </summary>
+        public static void Fan(Vector3 center, Vector3 direction, float radius, float halfAngle, Color color, int count = 24, float life = 0.35f, float size = 0.22f)
+        {
+            PixelFx fx = Get();
+            if (!fx || count <= 0 || life <= 0f) return;
+            center.y += 0.05f;   // just clear of the floor
+            float heading = Mathf.Atan2(direction.x, direction.z), half = Mathf.Clamp(halfAngle, 0f, 180f) * Mathf.Deg2Rad;
+            float offset = Random.value;
+            for (int i = 0; i < count; i++)
+            {
+                float angle = heading + Mathf.Lerp(-half, half, count > 1 ? (i + offset * 0.5f) / count : 0.5f);
+                var outward = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+                fx.Spawn(KindFlat, center + outward * 0.4f, outward * ((radius - 0.4f) / life), color, size, life, 0f);
             }
         }
 

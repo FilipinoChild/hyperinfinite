@@ -24,6 +24,16 @@ namespace HyperInfinite
         public static Sprite Arrow => Get("Arrow", 0, ArrowRows);
         /// <summary>A corner of the hurt and shield borders; flipped for the other three corners.</summary>
         public static Sprite Corner => Get("Corner", 0, CornerRows);
+        /// <summary>The star where a melee bash lands.</summary>
+        public static Sprite Impact => Get("Impact", 0, ImpactRows);
+        /// <summary>The explosion out of the emitters when a heavy bash dumps the gun's heat.</summary>
+        public static Sprite Blast => Get("Blast", 0, BlastRows);
+        /// <summary>A broken ring, grown outward in steps for a heavy bash's shockwave.</summary>
+        public static Sprite BlastRing => Get("Blast Ring", 0, BlastRingRows);
+        /// <summary>The flame floating over a branded enemy, in three layers tinted separately: the black outline, the flame, and its core.</summary>
+        public static Sprite BrandOutline => Get("Brand Outline", 0, BrandOutlineRows);
+        public static Sprite BrandFlame => Get("Brand Flame", 0, BrandFlameRows);
+        public static Sprite BrandCore => Get("Brand Core", 0, BrandCoreRows);
         /// <summary>The ">" that marks the selected menu button.</summary>
         public static Sprite Chevron => Get("Chevron", 0, ChevronRows);
         /// <summary>The mark beside a boss's name: a spider with its legs arched like the Hive Mother's, and holes for its eyes.</summary>
@@ -51,6 +61,108 @@ namespace HyperInfinite
             "..#.+#+.#..",
             ".#...#...#.",
             ".....#.....",
+        };
+
+        static readonly string[] ImpactRows =
+        {
+            "....#....",
+            ".#..#..#.",
+            "..#.#.#..",
+            "...###...",
+            "####+####",
+            "...###...",
+            "..#.#.#..",
+            ".#..#..#.",
+            "....#....",
+        };
+
+        static readonly string[] BlastRows =
+        {
+            ".......#.......",
+            "..#....#....#..",
+            "...#..###..#...",
+            "....+#####+....",
+            ".#.#########.#.",
+            "..###########..",
+            "..###########..",
+            "###############",
+            "..###########..",
+            "..###########..",
+            ".#.#########.#.",
+            "....+#####+....",
+            "...#..###..#...",
+            "..#....#....#..",
+            ".......#.......",
+        };
+
+        static readonly string[] BlastRingRows =
+        {
+            ".....##+##.....",
+            "...##.....#+...",
+            "..+.........#..",
+            ".#...........#.",
+            ".#.............",
+            "#.............#",
+            "#.............+",
+            "+.............#",
+            "#.............#",
+            "..............#",
+            ".#...........#.",
+            ".#...........+.",
+            "..#.........#..",
+            "...+#.....##...",
+            ".....#+###.....",
+        };
+
+        static readonly string[] BrandOutlineRows =
+        {
+            ".....#.......",
+            "....#.#......",
+            "....#..#.#...",
+            "...#...##.#..",
+            "...#....#.#..",
+            "..#.......#..",
+            ".#.........#.",
+            ".#.........#.",
+            "#...........#",
+            "#...........#",
+            ".#.........#.",
+            "..#.......#..",
+            "...#######...",
+        };
+
+        static readonly string[] BrandFlameRows =
+        {
+            ".............",
+            ".....#.......",
+            ".....##......",
+            "....###..#...",
+            "....####.#...",
+            "...#######...",
+            "..#########..",
+            "..####.####..",
+            ".####...####.",
+            ".####...####.",
+            "..###...###..",
+            "...#######...",
+            ".............",
+        };
+
+        static readonly string[] BrandCoreRows =
+        {
+            ".............",
+            ".............",
+            ".............",
+            ".............",
+            ".............",
+            ".............",
+            "......#......",
+            ".....###.....",
+            ".....###.....",
+            "....#####....",
+            ".....###.....",
+            ".............",
+            ".............",
         };
 
         static readonly string[] ArrowRows =

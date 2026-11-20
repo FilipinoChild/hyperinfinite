@@ -64,6 +64,12 @@ namespace HyperInfinite
             onRevived.Invoke();
         }
 
+        /// <summary>Immune for the next <paramref name="seconds"/>, or longer if it already was: a moment of cover while committing to an attack.</summary>
+        public void Protect(float seconds)
+        {
+            immuneUntil = Mathf.Max(immuneUntil, Time.time + seconds);
+        }
+
         /// <summary>True while immune after a hit or a revive.</summary>
         public bool IsProtected => Time.time < immuneUntil;
     }
