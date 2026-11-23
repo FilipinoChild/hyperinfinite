@@ -6,11 +6,10 @@ namespace HyperInfinite
 {
     /// <summary>
     /// The pause menu. Press Esc (or Start on a gamepad) and the game freezes, sound pauses (the music plays
-    /// on, muffled), the cursor is freed and the menu comes up with RESUME, MAIN MENU, MUSIC, SOUND and QUIT
-    /// GAME. Music and Sound step the volume down 20% at a time, from 100% round to 0% and back, and are kept
-    /// between sessions. Esc again, or Resume, carries
-    /// on where you left off. Main Menu goes back to the title screen, and Quit Game closes the game (in
-    /// the editor it stops Play mode instead).
+    /// on, muffled), the cursor is freed and the menu comes up with RESUME, MAIN MENU, the options and QUIT
+    /// GAME. The options are four sliders, the same ones the title screen has: MUSIC, SOUND, SENSITIVITY and
+    /// MAX FPS (see OptionsSliders). Esc again, or Resume, carries on where you left off. Main Menu goes back to the
+    /// title screen, and Quit Game closes the game (in the editor it stops Play mode instead).
     ///
     /// Put it on the Player, next to PlayerControls; Hyper Infinite > Build Test Level does. Like
     /// PlayerHud it makes its own canvas from UiKit's parts, drawn over the HUD, so every scene with the
@@ -29,7 +28,6 @@ namespace HyperInfinite
         Canvas canvas;
         GameObject menu;
         Button resumeButton;
-        Text musicLabel, soundLabel;
         float timeScaleBefore = 1f;
 
         /// <summary>True while the game is paused.</summary>
@@ -119,46 +117,16 @@ namespace HyperInfinite
             dim.color = DimColor;
             dim.raycastTarget = true;   // clicks beside the buttons don't reach the game
 
-            RectTransform panel = UiKit.Panel("Panel", cover, middle, middle, Vector2.zero, new Vector2(480f, 642f));
-            UiKit.Label("Title", panel, middle, middle, new Vector2(0f, 255f), new Vector2(420f, 72f), "PAUSED", 48, TextAnchor.MiddleCenter, Palette.Cyan);
+            RectTransform panel = UiKit.Panel("Panel", cover, middle, middle, Vector2.zero, new Vector2(480f, 822f));
+            UiKit.Label("Title", panel, middle, middle, new Vector2(0f, 345f), new Vector2(420f, 72f), "PAUSED", 48, TextAnchor.MiddleCenter, Palette.Cyan);
             var size = new Vector2(360f, 72f);
-            resumeButton = UiKit.NewButton("Resume", panel, new Vector2(0f, 156f), size, "RESUME", Palette.Cyan, Resume);
-            Button mainMenu = UiKit.NewButton("Main Menu", panel, new Vector2(0f, 66f), size, "MAIN MENU", Palette.Cyan, GoToMainMenu);
-            Button music = UiKit.NewButton("Music", panel, new Vector2(0f, -24f), size, "", Palette.Cyan, StepMusic);
-            Button sound = UiKit.NewButton("Sound", panel, new Vector2(0f, -114f), size, "", Palette.Cyan, StepSound);
-            UiKit.NewButton("Quit Game", panel, new Vector2(0f, -204f), size, "QUIT GAME", Palette.Red, QuitGame);
+            resumeButton = UiKit.NewButton("Resume", panel, new Vector2(0f, 246f), size, "RESUME", Palette.Cyan, Resume);
+            Button mainMenu = UiKit.NewButton("Main Menu", panel, new Vector2(0f, 156f), size, "MAIN MENU", Palette.Cyan, GoToMainMenu);
+            OptionsSliders.Build(panel, new Vector2(0f, 66f), size, 90f, Palette.Cyan);   // music, sound, sensitivity and max FPS
+            UiKit.NewButton("Quit Game", panel, new Vector2(0f, -294f), size, "QUIT GAME", Palette.Red, QuitGame);
             mainMenu.gameObject.SetActive(Application.CanStreamedLevelBeLoaded(titleScene));   // only if the build has it
-            UiKit.Label("Hint", panel, middle, middle, new Vector2(0f, -282f), new Vector2(420f, 30f), "ESC TO RESUME", 16, TextAnchor.MiddleCenter, Palette.Dim);
-            musicLabel = music.GetComponentInChildren<Text>();
-            soundLabel = sound.GetComponentInChildren<Text>();
-            ShowVolumes();
+            UiKit.Label("Hint", panel, middle, middle, new Vector2(0f, -372f), new Vector2(420f, 30f), "ESC TO RESUME", 16, TextAnchor.MiddleCenter, Palette.Dim);
             menu.SetActive(false);
-        }
-
-        /// <summary>Music volume down a step, from 100% round to 0% and back.</summary>
-        public void StepMusic()
-        {
-            GameAudio.MusicVolume = NextStep(GameAudio.MusicVolume);
-            ShowVolumes();
-        }
-
-        /// <summary>Sound volume down a step, from 100% round to 0% and back.</summary>
-        public void StepSound()
-        {
-            GameAudio.SfxVolume = NextStep(GameAudio.SfxVolume);
-            ShowVolumes();
-        }
-
-        static float NextStep(float volume)
-        {
-            int step = Mathf.RoundToInt(volume * 5f);   // 0 to 5, a fifth each
-            return (step <= 0 ? 5 : step - 1) / 5f;
-        }
-
-        void ShowVolumes()
-        {
-            if (musicLabel) musicLabel.text = "MUSIC " + Mathf.RoundToInt(GameAudio.MusicVolume * 100f) + "%";
-            if (soundLabel) soundLabel.text = "SOUND " + Mathf.RoundToInt(GameAudio.SfxVolume * 100f) + "%";
         }
     }
 }

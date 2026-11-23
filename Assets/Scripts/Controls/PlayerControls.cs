@@ -28,9 +28,9 @@ namespace HyperInfinite
         [SerializeField] InputActionAsset actions;
 
         [Header("Look")]
-        [Tooltip("Degrees turned per pixel of mouse travel.")]
+        [Tooltip("Degrees turned per pixel of mouse travel, before the player's own sensitivity setting from the options menu.")]
         [SerializeField, Range(0.01f, 0.6f)] float mouseSensitivity = 0.12f;
-        [Tooltip("Degrees per second with the right stick fully tilted.")]
+        [Tooltip("Degrees per second with the right stick fully tilted, before the player's own sensitivity setting.")]
         [SerializeField, Range(30f, 600f)] float stickLookSpeed = 200f;
         [Tooltip("Look speed is multiplied by this while Aim is held, for finer aiming.")]
         [SerializeField, Range(0.2f, 1f)] float aimLookScale = 0.7f;
@@ -200,7 +200,8 @@ namespace HyperInfinite
         /// <summary>
         /// The mouse reports how far it moved this frame, in pixels. A stick reports how far it's tilted,
         /// which becomes a turning speed, with a squared curve for fine control near the center. The
-        /// stick's dead zone comes from Project Settings > Input System Package.
+        /// stick's dead zone comes from Project Settings > Input System Package. Both are then multiplied by
+        /// the player's own look sensitivity from the options menu (GameOptions), where 1 changes nothing.
         /// </summary>
         Vector2 ReadLook()
         {
@@ -209,6 +210,7 @@ namespace HyperInfinite
             bool stick = source != null && source.device is Gamepad;
             Vector2 degrees = stick ? value * (value.magnitude * stickLookSpeed * Time.unscaledDeltaTime)
                                     : value * mouseSensitivity;
+            degrees *= GameOptions.LookSensitivity;
             if (invertY) degrees.y = -degrees.y;
             if (AimHeld) degrees *= aimLookScale;
             return degrees;

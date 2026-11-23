@@ -189,6 +189,66 @@ namespace HyperInfinite
             return button;
         }
 
+        /// <summary>
+        /// A slider in the menus' style, centered on <paramref name="position"/> in its parent: the same dark
+        /// plate and border as a button, with its name on the left, its value on the right and a chunky track
+        /// underneath. Drag it, click anywhere along it, or select it and press left and right. It moves in whole
+        /// steps from <paramref name="min"/> to <paramref name="max"/>. The caller listens to its onValueChanged
+        /// and writes the value into <paramref name="valueLabel"/>.
+        /// </summary>
+        public static Slider NewSlider(string name, Transform parent, Vector2 position, Vector2 size, string text, Color accent,
+                                       int min, int max, out Text valueLabel)
+        {
+            const float Pad = 8f * Pixel, HandleWidth = 4f * Pixel, TrackHeight = 4f * Pixel;
+            var topLeft = new Vector2(0f, 1f);
+            var topRight = new Vector2(1f, 1f);
+            var bottom = new Vector2(0.5f, 0f);
+
+            Image plate = Box(name, parent, Middle, Middle, position, size, ButtonPlate);
+            plate.raycastTarget = true;   // the whole plate takes the drag
+            Image border = Border(plate.transform, Color.white);
+            Image marker = Picture("Marker", plate.transform, topLeft, topLeft, new Vector2(Pad, -4f * Pixel),
+                                   new Vector2(5f, 7f) * Pixel, PixelArt.Chevron, accent);
+            Text label = Label("Label", plate.transform, topLeft, topLeft, new Vector2(Pad + 7f * Pixel, -3f * Pixel),
+                               new Vector2(size.x * 0.6f, 9f * Pixel), text, 24, TextAnchor.MiddleLeft, Palette.Dim);
+            valueLabel = Label("Value", plate.transform, topRight, topRight, new Vector2(-Pad, -3f * Pixel),
+                               new Vector2(size.x * 0.3f, 9f * Pixel), "", 24, TextAnchor.MiddleRight, Palette.White);
+
+            // The track, with the fill and the handle in an area half a handle narrower each side, so the handle
+            // stays on the track at both ends. The fill reaches back to the track's start.
+            RectTransform track = Track("Track", plate.transform, bottom, bottom, new Vector2(0f, 5f * Pixel),
+                                        new Vector2(size.x - 2f * Pad, TrackHeight));
+            RectTransform area = Cover("Slide Area", track);
+            area.offsetMin = new Vector2(HandleWidth * 0.5f, 0f);
+            area.offsetMax = new Vector2(-HandleWidth * 0.5f, 0f);
+            Image fill = Paint(Cover("Fill", area), null, accent);
+            fill.rectTransform.offsetMin = new Vector2(-HandleWidth * 0.5f, 0f);
+            Image handle = Paint(Cover("Handle", area), null, Palette.White);
+            handle.rectTransform.sizeDelta = new Vector2(HandleWidth, 4f * Pixel);   // 2 pixels taller than the track, above and below
+
+            var slider = plate.gameObject.AddComponent<Slider>();
+            slider.targetGraphic = border;
+            ColorBlock colors = slider.colors;
+            colors.normalColor = ButtonEdge;
+            colors.highlightedColor = accent;
+            colors.selectedColor = accent;
+            colors.pressedColor = Color.white;
+            colors.disabledColor = new Color(ButtonEdge.r, ButtonEdge.g, ButtonEdge.b, 0.5f);
+            colors.fadeDuration = 0f;   // snaps, like the rest of the art
+            slider.colors = colors;
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.fillRect = fill.rectTransform;
+            slider.handleRect = handle.rectTransform;
+            slider.wholeNumbers = true;
+            slider.minValue = min;
+            slider.maxValue = max;
+
+            var highlight = plate.gameObject.AddComponent<MenuButton>();
+            highlight.SetUp(marker, label, Palette.Dim, Palette.White);
+            highlight.PressSound = false;   // a slider ticks as it moves instead
+            return slider;
+        }
+
         /// <summary>Puts the menu highlight on <paramref name="button"/>, for the keyboard and gamepad to start from.</summary>
         public static void Select(Selectable button)
         {

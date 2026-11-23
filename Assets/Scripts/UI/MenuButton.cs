@@ -11,7 +11,7 @@ namespace HyperInfinite
     /// (the ">" beside the label) and brighten its label.
     ///
     /// Put it on the same object as the Button. UiKit.NewButton does that for buttons made in code, and
-    /// TitleMenu adds it to the title screen's buttons.
+    /// TitleMenu adds it to the title screen's buttons. UiKit.NewSlider puts it on sliders too.
     /// </summary>
     [DisallowMultipleComponent]
     public class MenuButton : MonoBehaviour, IPointerEnterHandler, ISelectHandler, IDeselectHandler, IPointerClickHandler, ISubmitHandler
@@ -25,6 +25,9 @@ namespace HyperInfinite
 
         Selectable selectable;
         float shownAt;
+
+        /// <summary>Whether a click or Enter makes the select sound. Off for sliders, which tick as they move.</summary>
+        public bool PressSound { get; set; } = true;
 
         /// <summary>For buttons made in code: what to show and brighten while selected.</summary>
         public void SetUp(Graphic marker, Graphic label, Color labelColor, Color selectedLabelColor)
@@ -66,7 +69,7 @@ namespace HyperInfinite
 
         void Pressed()
         {
-            if (selectable && !selectable.IsInteractable()) return;
+            if (!PressSound || (selectable && !selectable.IsInteractable())) return;
             Sfx.Play(Sound.UiSelect);
         }
 
