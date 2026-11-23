@@ -9,12 +9,21 @@ namespace HyperInfinite
     /// starts hidden and does no work until it's shown, so it can stay in a scene that ships.
     /// It finds what it reports on by itself, so it works in any scene that has the Player in it.
     /// In the editor and development builds, F2 turns HYPER on for testing.
+    ///
+    /// F3 shows or hides a frame-time readout in the top right corner, in any build: the average frame time and
+    /// frames per second, the slowest frame, and how many enemies are alive. Its text is rebuilt twice a second, so
+    /// it costs next to nothing and can be left on while measuring. The big panel costs more: close it to measure.
+    ///
+    /// The drawing is done by a small helper component that's switched off whenever there's nothing to draw, so
+    /// a hidden panel costs no GUI events at all.
     /// </summary>
     public class TempDebugHud : MonoBehaviour
     {
         [SerializeField] Key togglePanel = Key.F1;
         [Tooltip("Testing only, in the editor and development builds: turns HYPER on at once, without a core.")]
         [SerializeField] Key giveHyper = Key.F2;
+        [Tooltip("Shows or hides the frame-time readout, in any build.")]
+        [SerializeField] Key togglePerformance = Key.F3;
 
         static readonly Color PanelColor = new Color(0.04f, 0.04f, 0.06f, 0.62f);
         static readonly Color ChipOff = new Color(0.2f, 0.21f, 0.25f, 0.85f);
@@ -38,15 +47,51 @@ namespace HyperInfinite
         readonly GUIContent content = new GUIContent();
         float cursorY;
 
+        // The frame-time readout
+        const float PerformanceEvery = 0.5f;   // seconds between updates of its text
+        bool showPerformance;
+        float perfTime, perfWorst;
+        int perfFrames;
+        string perfText = "";
+        ScuttlerSpawner spawner;
+        Drawer drawer;
+
+        /// <summary>Draws for the debug HUD. Only switched on while there's something to draw.</summary>
+        sealed class Drawer : MonoBehaviour
+        {
+            public TempDebugHud owner;
+
+            void Awake()
+            {
+                useGUILayout = false;   // everything is placed by hand, so Unity can skip the layout pass
+            }
+
+            void OnGUI()
+            {
+                if (owner) owner.Draw();
+            }
+        }
+
         void Awake()
         {
-            useGUILayout = false;   // it places everything itself, so Unity can skip the layout pass
+            drawer = gameObject.AddComponent<Drawer>();
+            drawer.owner = this;
+            drawer.enabled = Debug.isDebugBuild;   // a development build shows the F1 hint
         }
 
         void Update()
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard != null && togglePanel != Key.None && keyboard[togglePanel].wasPressedThisFrame) showPanel = !showPanel;
+            if (keyboard != null && togglePerformance != Key.None && keyboard[togglePerformance].wasPressedThisFrame)
+            {
+                showPerformance = !showPerformance;
+                perfTime = perfWorst = 0f;
+                perfFrames = 0;
+                perfText = "MEASURING...";
+            }
+            drawer.enabled = showPanel || showPerformance || Debug.isDebugBuild;
+            if (showPerformance) MeasureFrame();
             if (Debug.isDebugBuild && keyboard != null && giveHyper != Key.None && keyboard[giveHyper].wasPressedThisFrame)
             {
                 if (!hyper) hyper = FindAnyObjectByType<HyperPower>();
@@ -90,20 +135,47 @@ namespace HyperInfinite
             if (!drops) drops = FindAnyObjectByType<PowerUpDrops>();
         }
 
-        void OnGUI()
+        /// <summary>Adds this frame to the readout's average, and rebuilds its text twice a second.</summary>
+        void MeasureFrame()
+        {
+            float dt = Time.unscaledDeltaTime;
+            perfTime += dt;
+            perfFrames++;
+            if (dt > perfWorst) perfWorst = dt;
+            if (perfTime < PerformanceEvery) return;
+
+            float average = perfTime / perfFrames;
+            if (!spawner) spawner = FindAnyObjectByType<ScuttlerSpawner>();
+            perfText = (average * 1000f).ToString("0.0") + " MS  \u00B7  " + Mathf.RoundToInt(1f / average) + " FPS  \u00B7  SLOWEST "
+                       + (perfWorst * 1000f).ToString("0.0") + " MS" + (spawner ? "  \u00B7  " + spawner.ScuttlersLeft + " ENEMIES" : "");
+            perfTime = perfWorst = 0f;
+            perfFrames = 0;
+        }
+
+        /// <summary>The frame-time readout, right-aligned in the top right corner, under the boss bar's row.</summary>
+        void DrawPerformance()
+        {
+            content.text = perfText;
+            Vector2 size = text.CalcSize(content);
+            float x = Screen.width / (Screen.height / 1080f) - size.x - 24f;
+            Fill(new Rect(x - 6f, 149f, size.x + 12f, size.y + 2f), PanelColor);
+            GUI.Label(new Rect(x, 150f, size.x + 4f, size.y), content, text);
+        }
+
+        void Draw()
         {
             if (Event.current.type != EventType.Repaint) return;
-            if (!showPanel && !Debug.isDebugBuild) return;   // nothing at all in a release build until F1
             MakeStyles();
             float scale = Screen.height / 1080f;          // lay out on a 1080-pixel-tall canvas at any resolution
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
 
+            if (showPerformance) DrawPerformance();
             DrawEggMarkers(scale);
 
             cursorY = 150f;   // below PlayerHud's wave counter
             if (!showPanel)
             {
-                Line("F1: show test readouts", small);
+                if (Debug.isDebugBuild) Line("F1: show test readouts", small);
                 return;
             }
             Line("<b>COMBAT & CONTROLS</b>  ·  temporary readouts, F1 hides", small);
