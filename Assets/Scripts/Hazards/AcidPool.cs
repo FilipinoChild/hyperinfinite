@@ -24,6 +24,10 @@ namespace HyperInfinite
 
         void OnTriggerStay(Collider other)
         {
+            // This runs for everything standing in the acid on every physics step, right after FixedUpdate. Who's
+            // inside only matters on the step before a tick, so the lookups below are skipped on all the others.
+            if (tickTimer > Time.fixedDeltaTime) return;
+
             IDamageable target = other.GetComponentInParent<IDamageable>();
             if (target == null) return;   
             if (!hurtsEnemies && other.GetComponentInParent<PlayerControls>() == null) return;

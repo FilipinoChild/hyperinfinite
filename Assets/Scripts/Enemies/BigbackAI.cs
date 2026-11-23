@@ -46,6 +46,8 @@ namespace HyperInfinite
         public bool IsDazed => state == AttackState.Dazed;
         public float IncomingDamageMultiplier => IsDazed ? Mathf.Max(1f, dazedDamageMultiplier) : 1f;
         int shownView = -1, shownFrame = -1;
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        Color shownTint = Color.white;   // the tint last sent to the material, so it's only sent when it changes
 
         void Awake()
         {
@@ -415,7 +417,11 @@ namespace HyperInfinite
             body.localScale = new Vector3(bodyScale.x * (1f + braced), bodyScale.y * (1f - braced), bodyScale.z);
             Color tint = Time.time < flashUntil ? new Color(0.65f, 0.90f, 1f) :
                 windingUp && Mathf.FloorToInt(Time.time * 12f) % 2 == 0 ? new Color(1f, 0.65f, 0.38f) : Color.white;
-            spriteMaterial.SetColor("_BaseColor", tint);
+            if (tint != shownTint)
+            {
+                shownTint = tint;
+                spriteMaterial.SetColor(BaseColorId, tint);
+            }
         }
 
         void OnDestroy() { if (spriteMaterial) Destroy(spriteMaterial); }

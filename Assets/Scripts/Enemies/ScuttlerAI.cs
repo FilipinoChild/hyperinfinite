@@ -64,6 +64,7 @@ namespace HyperInfinite
         Transform player;            // where the player is
         IDamageable playerHealth;    // what the bite damages
         float repathTimer, attackTimer, scatterTimer;
+        float repathStagger;         // shifts this Scuttler's path updates off its packmates', so they don't all land on one frame
         bool committed;              // false while flanking, true once it rushes in
 
         Vector3 bodyRest;            // where the body sits when not pouncing
@@ -109,6 +110,7 @@ namespace HyperInfinite
             }
             player = controls.transform;
             playerHealth = controls.GetComponentInChildren<IDamageable>();
+            repathStagger = Random.value * repathInterval;
         }
 
         void Update()
@@ -128,7 +130,8 @@ namespace HyperInfinite
 
             if (repathTimer <= 0f)
             {
-                repathTimer = repathInterval;
+                repathTimer = repathInterval + repathStagger;   // the first path comes at once; after that, at its own moment
+                repathStagger = 0f;
                 agent.SetDestination(PickDestination());
             }
 

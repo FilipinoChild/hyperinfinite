@@ -40,6 +40,13 @@ namespace HyperInfinite
         State state = State.Moving;
         float stateTimer, fireTimer, repathTimer;
 
+        // The player, found once and shared, so a wave of Spitters doesn't search the scene once each
+        static PlayerControls sharedPlayer;
+        // Seconds between checks for a clear line to the player. The check is a raycast, so it isn't made every frame.
+        const float SightInterval = 0.15f;
+        float sightTimer, repathStagger;
+        bool seesPlayer;
+
         void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
@@ -49,7 +56,8 @@ namespace HyperInfinite
 
         void Start()
         {
-            PlayerControls controls = FindAnyObjectByType<PlayerControls>();
+            if (!sharedPlayer) sharedPlayer = FindAnyObjectByType<PlayerControls>();
+            PlayerControls controls = sharedPlayer;
             if (controls == null)
             {
                 Debug.LogWarning("SpitterAI: no player found in the scene.", this);
@@ -59,6 +67,9 @@ namespace HyperInfinite
             player = controls.transform;
             lastPlayerPosition = player.position;
             fireTimer = fireCooldown * 0.5f;   // first shot comes a little sooner
+            // Each Spitter looks and plans at its own moment, so a wave that arrives together doesn't all do it on the same frame
+            repathStagger = Random.value * repathInterval;
+            sightTimer = 0f;
         }
 
         void Update()
@@ -75,13 +86,20 @@ namespace HyperInfinite
             switch (state)
             {
                 case State.Moving:
+                    sightTimer -= dt;
+                    if (sightTimer <= 0f)
+                    {
+                        sightTimer = SightInterval;
+                        seesPlayer = CanSeePlayer();
+                    }
                     repathTimer -= dt;
                     if (repathTimer <= 0f)
                     {
-                        repathTimer = repathInterval;
+                        repathTimer = repathInterval + repathStagger;   // the first plan comes at once; after that, at its own moment
+                        repathStagger = 0f;
                         agent.SetDestination(PickSpot());
                     }
-                    if (fireTimer <= 0f && CanSeePlayer() && FlatDistanceToPlayer() <= preferredRange + 4f)
+                    if (fireTimer <= 0f && seesPlayer && FlatDistanceToPlayer() <= preferredRange + 4f)
                         StartAiming();
                     break;
 
@@ -102,6 +120,7 @@ namespace HyperInfinite
                     {
                         state = State.Moving;
                         agent.isStopped = false;
+                        sightTimer = 0f;   // look again at once: what it saw before the shot is old
                     }
                     break;
             }
@@ -110,7 +129,7 @@ namespace HyperInfinite
         /// Where it wants to stand: at its preferred range from the player, with a clear shot.
         Vector3 PickSpot()
         {
-            if (!CanSeePlayer()) return player.position;   // no clear shot: move in until it has one
+            if (!seesPlayer) return player.position;   // no clear shot: move in until it has one
 
             Vector3 away = transform.position - player.position;
             away.y = 0f;
@@ -133,7 +152,7 @@ namespace HyperInfinite
             Vector3 mouth = transform.position + Vector3.up * spitHeight;
             Vector3 chest = player.position + Vector3.up * 1.2f;
             if (Physics.Linecast(mouth, chest, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore))
-                return hit.collider.GetComponentInParent<PlayerControls>() != null;
+                return hit.collider.transform.IsChildOf(player);   // the first thing in the way is the player
             return true;
         }
 
